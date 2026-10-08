@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TimingApp.Application\TimingApp.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OpenCvSharp4" />
+    <!-- Media Foundation capture on Windows (MIT). -->
+    <PackageReference Include="Vortice.MediaFoundation" />
+  </ItemGroup>
+  <!-- Native OpenCV runtime for the Windows finish PC. -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <PackageReference Include="OpenCvSharp4.runtime.win" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TimingApp.Infrastructure.Tests" />
+  </ItemGroup>
+</Project>

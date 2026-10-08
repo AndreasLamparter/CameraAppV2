@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+node_modules/
+web/dist/
+src/TimingApp.Api/wwwroot/
+src/TimingApp.Api/data/
+web/test-results/
+web/playwright-report/

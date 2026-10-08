@@ -1,0 +1,16 @@
+# 9 Architekturentscheidungen
+
+| Nr. | Entscheidung | Begründung |
+|---|---|---|
+| [ADR-001](../requirements/adr/ADR-001-external-control-api-key.md) | Externe Programme authentifizieren sich mit `X-Api-Key` | Teamentscheidung zu OP-1 |
+| [ADR-002](../requirements/adr/ADR-002-operator-pin-login.md) | Oberfläche immer mit PIN-Anmeldung (Cookie) | Teamentscheidung |
+| D-1 | Keine Datenbank (EF Core/SQLite) in Feature Set 1 | Es gibt keine relationalen Daten: Medien gehören laut CLAUDE.md §15 ins Dateisystem, Einstellungen sind ein JSON-Dokument. EF Core wird eingeführt, sobald ein Feature Set relationale Daten bringt. |
+| D-2 | `ICameraSource` ist ein interner Port von `TimingApp.Infrastructure.Camera`; die Application sieht `ICameraSystem` | Frames sind OpenCV-`Mat` und dürfen das Projekt nicht verlassen. Simulation und USB-Kameras laufen trotzdem durch dieselbe Capture-Pipeline. |
+| D-3 | Zielbild als PNG, Zeitleiste ins Bild gerendert | Verlustfrei, Download enthält die Zeitleiste (FS1-13, FS1-62). Die Wiedergabe zeigt den Zeitleisten-Teil des PNG unabhängig vom vertikalen Zoom. |
+| D-4 | Frontvideo mit konstanter Bildrate = gemessene Rate; Zuordnung über die gespeicherten Zeitstempel | Browser-Seeking braucht konstante Raten; Frame i liegt bei i / Rate, sein echter Zeitstempel steht in `recording.json`. |
+| D-5 | Front-Frames als JPEG im Ringpuffer, Zielkamera-Spalten roh | JPEG begrenzt den Speicher des Front-Vorlaufs; Spalten sind klein und bleiben verlustfrei für das Zielbild. |
+| D-6 | Hintergrund wird während eines laufenden Zielereignisses nicht angepasst | Verhindert, dass ein hintergrundähnlicher Fahrer eingelernt wird und die Linie dauerhaft belegt bleibt (siehe Interpretationen). |
+| D-7 | Live-Vorschau als MJPEG, Status über SignalR | CLAUDE.md §18, §26; Vorschau nur kodiert, solange ein Client zusieht. |
+| D-8 | Kameraauswahl über Gerätepfad + Name, Index nur als Rückfall | Der Index ändert sich beim Umstecken; der Pfad unterscheidet gleiche Modelle, der Name übersteht einen Portwechsel. Nicht gefundene Kamera → `camera.notFound` statt einer anderen Kamera. Teamentscheidung 2026-10-08. |
+| D-9 | Bilddrehung der Zielkamera statt Linienausrichtung (Spalte/Zeile); die Ziellinie ist immer eine Spalte des gedrehten Bildes | Eine um 90° montierte Kamera nutzt ihre lange Seite entlang der Linie; Vorschau und Zielbild erscheinen aufrecht. Das Rohbild wird nicht gedreht (90 Bilder/s), nur die Linienposition umgerechnet. Alte Einstellungen werden beim Laden übernommen (`JsonSettingsStore.Migrate`). Teamentscheidung 2026-10-08. |
+| D-10 | Kameras unter Windows direkt über Media Foundation lesen (Vortice.MediaFoundation, MIT), natives Format explizit MJPG; OpenCV nur noch zum Dekodieren und als Rückfall (DirectShow, V4L2) | Gemessen: Über OpenCV landete die SVPRO je nach Backend und Reihenfolge der Einstellungen in YUY2/NV12 statt MJPG (YUY2: 15 Bilder/s bei 960×720) und schwankte zwischen 1 und 90 Bilder/s; die Belichtung erreichte über OpenCV-MSMF die Kamera nicht. Mit explizitem MJPG über den Source Reader: Zielkamera 88–91, Frontkamera 25 Bilder/s gleichzeitig, stabil. Gerätepfade werden ohne Schnittstellen-Suffix verglichen, damit gespeicherte DirectShow-Auswahlen gültig bleiben. Teamentscheidung 2026-10-08. |

@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+@source '../src';
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}

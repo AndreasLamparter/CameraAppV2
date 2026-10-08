@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <UserSecretsId>timingapp-camera-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TimingApp.Infrastructure\TimingApp.Infrastructure.csproj" />
+    <ProjectReference Include="..\TimingApp.Infrastructure.Camera\TimingApp.Infrastructure.Camera.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TimingApp.Api.Tests" />
+  </ItemGroup>
+</Project>

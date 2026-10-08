@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TimingApp.Api/TimingApp.Api.csproj" />
+    <Project Path="src/TimingApp.Application/TimingApp.Application.csproj" />
+    <Project Path="src/TimingApp.Domain/TimingApp.Domain.csproj" />
+    <Project Path="src/TimingApp.Infrastructure.Camera/TimingApp.Infrastructure.Camera.csproj" />
+    <Project Path="src/TimingApp.Infrastructure/TimingApp.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TimingApp.Api.Tests/TimingApp.Api.Tests.csproj" />
+    <Project Path="tests/TimingApp.Application.Tests/TimingApp.Application.Tests.csproj" />
+    <Project Path="tests/TimingApp.Architecture.Tests/TimingApp.Architecture.Tests.csproj" />
+    <Project Path="tests/TimingApp.Domain.Tests/TimingApp.Domain.Tests.csproj" />
+    <Project Path="tests/TimingApp.Infrastructure.Tests/TimingApp.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

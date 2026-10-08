@@ -1,0 +1,1257 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "TimingApp.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/control/shutdown": {
+      "post": {
+        "tags": [
+          "Control"
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          }
+        }
+      }
+    },
+    "/api/live/{kind}": {
+      "get": {
+        "tags": [
+          "Live"
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PreviewKind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/simulator/occupancy": {
+      "put": {
+        "tags": [
+          "Simulator"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulatorOccupancyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Access"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/control/status": {
+      "get": {
+        "tags": [
+          "Control"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinishRecordingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/control/start": {
+      "post": {
+        "tags": [
+          "Control"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinishRecordingStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/control/stop": {
+      "post": {
+        "tags": [
+          "Control"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinishRecordingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/control/trigger": {
+      "put": {
+        "tags": [
+          "Control"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriggerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinishRecordingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/control/background/relearn": {
+      "post": {
+        "tags": [
+          "Control"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinishRecordingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recordings": {
+      "get": {
+        "tags": [
+          "Recordings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecordingSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recordings/{id}": {
+      "get": {
+        "tags": [
+          "Recordings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingMetadata"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recordings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recordings/{id}/files/{file}": {
+      "get": {
+        "tags": [
+          "Recordings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RecordingFile"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cameras/devices": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CameraDevice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CameraDevice": {
+        "required": [
+          "index",
+          "name",
+          "inUse",
+          "deviceName",
+          "devicePath",
+          "modes"
+        ],
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "inUse": {
+            "type": "boolean"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "devicePath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CameraMode"
+            }
+          }
+        }
+      },
+      "CameraMode": {
+        "required": [
+          "width",
+          "height",
+          "frameRate",
+          "format"
+        ],
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "frameRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "format": {
+            "type": "string"
+          }
+        }
+      },
+      "CameraSettingsDto": {
+        "required": [
+          "deviceIndex",
+          "width",
+          "height",
+          "frameRate",
+          "exposure",
+          "offsetMs"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "frameRate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exposure": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "offsetMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "devicePath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CameraState": {
+        "enum": [
+          "Off",
+          "Disabled",
+          "Starting",
+          "Running",
+          "Error"
+        ]
+      },
+      "CameraStatus": {
+        "required": [
+          "state",
+          "errorCode",
+          "measuredFrameRate",
+          "configuredFrameRate"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CameraState"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "measuredFrameRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "configuredFrameRate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DetectionDto": {
+        "required": [
+          "pixelThreshold",
+          "occupancyThresholdPercent",
+          "preRollSeconds",
+          "postRollSeconds",
+          "maxDurationSeconds",
+          "frontPreRollSeconds",
+          "frontPostRollSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "pixelThreshold": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "occupancyThresholdPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "preRollSeconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "postRollSeconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxDurationSeconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "frontPreRollSeconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "frontPostRollSeconds": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FinishEventEnd": {
+        "enum": [
+          "PostRoll",
+          "MaxDuration",
+          "Stopped"
+        ]
+      },
+      "FinishLineDto": {
+        "required": [
+          "rotation",
+          "position",
+          "width",
+          "reverseTimeDirection"
+        ],
+        "type": "object",
+        "properties": {
+          "rotation": {
+            "$ref": "#/components/schemas/ImageRotation"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reverseTimeDirection": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FinishRecordingStatus": {
+        "required": [
+          "mode",
+          "finishCamera",
+          "frontCamera",
+          "line",
+          "overlay",
+          "pendingSaves",
+          "lastProblem",
+          "serverTime"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/OperatingMode"
+          },
+          "finishCamera": {
+            "$ref": "#/components/schemas/CameraStatus"
+          },
+          "frontCamera": {
+            "$ref": "#/components/schemas/CameraStatus"
+          },
+          "line": {
+            "$ref": "#/components/schemas/LineStatus"
+          },
+          "overlay": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LineOverlay"
+              }
+            ]
+          },
+          "pendingSaves": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastProblem": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SaveProblem"
+              }
+            ]
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FrontVideoInfo": {
+        "required": [
+          "available",
+          "errorCode",
+          "frameRate",
+          "frameTimestamps"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frameRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "frameTimestamps": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      },
+      "ImageRotation": {
+        "enum": [
+          "None",
+          "Clockwise90",
+          "CounterClockwise90",
+          "Rotate180"
+        ]
+      },
+      "LineOverlay": {
+        "required": [
+          "position",
+          "width"
+        ],
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "number",
+            "format": "double"
+          },
+          "width": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "LineState": {
+        "enum": [
+          "Free",
+          "Occupied",
+          "Recording"
+        ]
+      },
+      "LineStatus": {
+        "required": [
+          "state",
+          "occupancyPercent",
+          "lineRate",
+          "lineRateWarning",
+          "manualTrigger",
+          "backgroundLearning",
+          "eventRunning",
+          "eventStartedAt",
+          "detectedEvents"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "occupancyPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "lineRate": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lineRateWarning": {
+            "type": "boolean"
+          },
+          "manualTrigger": {
+            "type": "boolean"
+          },
+          "backgroundLearning": {
+            "type": "boolean"
+          },
+          "eventRunning": {
+            "type": "boolean"
+          },
+          "eventStartedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "detectedEvents": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "LoginRequest": {
+        "required": [
+          "pin"
+        ],
+        "type": "object",
+        "properties": {
+          "pin": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OperatingMode": {
+        "enum": [
+          "Stopped",
+          "Preview",
+          "Recording"
+        ]
+      },
+      "PreviewKind": {
+        "enum": [
+          "FinishCamera",
+          "FrontCamera",
+          "FinishStrip"
+        ]
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RecordingFile": {
+        "enum": [
+          "FinishImage",
+          "FinishVideo",
+          "FrontVideo"
+        ]
+      },
+      "RecordingMetadata": {
+        "required": [
+          "id",
+          "startedAt",
+          "endedAt",
+          "eventStartedAt",
+          "eventEndedAt",
+          "endReason",
+          "lineRate",
+          "reverseTimeDirection",
+          "imageWidth",
+          "imageHeight",
+          "timelineHeight",
+          "columnTimestamps",
+          "finishVideo",
+          "frontVideo",
+          "finishOffsetMs",
+          "frontOffsetMs"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eventStartedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eventEndedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endReason": {
+            "$ref": "#/components/schemas/FinishEventEnd"
+          },
+          "lineRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "reverseTimeDirection": {
+            "type": "boolean"
+          },
+          "imageWidth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "imageHeight": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timelineHeight": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "columnTimestamps": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "finishVideo": {
+            "$ref": "#/components/schemas/VideoInfo"
+          },
+          "frontVideo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FrontVideoInfo"
+              }
+            ]
+          },
+          "finishOffsetMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "frontOffsetMs": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "RecordingSummary": {
+        "required": [
+          "id",
+          "startedAt",
+          "durationSeconds",
+          "lineRate",
+          "hasFrontVideo",
+          "hasVideoError",
+          "sizeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "lineRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "hasFrontVideo": {
+            "type": "boolean"
+          },
+          "hasVideoError": {
+            "type": "boolean"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SaveProblem": {
+        "required": [
+          "code",
+          "recordingId",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "recordingId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SessionDto": {
+        "required": [
+          "signedIn"
+        ],
+        "type": "object",
+        "properties": {
+          "signedIn": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SettingsDto": {
+        "required": [
+          "mediaDirectory",
+          "finishCamera",
+          "frontCamera",
+          "frontCameraEnabled",
+          "finishLine",
+          "detection"
+        ],
+        "type": "object",
+        "properties": {
+          "mediaDirectory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finishCamera": {
+            "$ref": "#/components/schemas/CameraSettingsDto"
+          },
+          "frontCamera": {
+            "$ref": "#/components/schemas/CameraSettingsDto"
+          },
+          "frontCameraEnabled": {
+            "type": "boolean"
+          },
+          "finishLine": {
+            "$ref": "#/components/schemas/FinishLineDto"
+          },
+          "detection": {
+            "$ref": "#/components/schemas/DetectionDto"
+          }
+        }
+      },
+      "SettingsResponse": {
+        "required": [
+          "settings",
+          "effectiveMediaDirectory",
+          "appliesOnNextStart"
+        ],
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/SettingsDto"
+          },
+          "effectiveMediaDirectory": {
+            "type": "string"
+          },
+          "appliesOnNextStart": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SimulatorOccupancyRequest": {
+        "required": [
+          "occupied"
+        ],
+        "type": "object",
+        "properties": {
+          "occupied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StartRequest": {
+        "required": [
+          "mode"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/OperatingMode"
+          }
+        }
+      },
+      "TriggerRequest": {
+        "required": [
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VideoInfo": {
+        "required": [
+          "available",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Control"
+    },
+    {
+      "name": "Live"
+    },
+    {
+      "name": "Simulator"
+    },
+    {
+      "name": "Access"
+    },
+    {
+      "name": "Recordings"
+    },
+    {
+      "name": "Settings"
+    }
+  ]
+}
