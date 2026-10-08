@@ -16,6 +16,8 @@ const props = defineProps<{
   selectedColumn: number
   zoomX: number
   zoomY: number
+  /** Passages (FS2-15): column and label of each mark. */
+  marks?: { column: number; label: string }[]
 }>()
 const emit = defineEmits<{ select: [column: number] }>()
 
@@ -41,6 +43,10 @@ const timelineStyle = computed(() => ({
 }))
 
 const markerLeft = computed(() => (columnToX(props.selectedColumn, props.width, props.reverse) + 0.5) * props.zoomX)
+
+const markLefts = computed(() =>
+  (props.marks ?? []).map((mark) => ({ ...mark, left: (columnToX(mark.column, props.width, props.reverse) + 0.5) * props.zoomX })),
+)
 
 function onClick(event: MouseEvent): void {
   const target = event.currentTarget as HTMLElement
@@ -74,6 +80,15 @@ watch([markerLeft, () => props.zoomX], async () => {
     >
       <div class="pixelated bg-no-repeat" :style="linesStyle" />
       <div class="pixelated bg-no-repeat" :style="timelineStyle" />
+      <div
+        v-for="(mark, i) in markLefts"
+        :key="i"
+        class="pointer-events-none absolute top-0 bottom-0 w-px bg-amber-400"
+        :style="{ left: `${mark.left}px` }"
+        data-testid="passage-mark"
+      >
+        <span class="mono absolute top-0 left-1 rounded bg-amber-400 px-1 text-xs text-black">{{ mark.label }}</span>
+      </div>
       <div
         class="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500 shadow-[0_0_0_1px_rgba(255,255,255,0.6)]"
         :style="{ left: `${markerLeft}px` }"

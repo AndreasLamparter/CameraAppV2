@@ -29,6 +29,17 @@ const video = ref<HTMLVideoElement | null>(null)
 let frameCallback: number | undefined
 
 const front = computed(() => (recording.value?.frontVideo?.available ? recording.value.frontVideo : null))
+
+/** Passages of the timing system at their nearest column (FS2-15). */
+const passages = computed(() => {
+  const r = recording.value
+  return (r?.passages ?? []).map((p) => ({
+    startNumber: p.startNumber,
+    time: p.time,
+    column: r ? nearestIndex(r.columnTimestamps, p.time) : 0,
+  }))
+})
+const passageMarks = computed(() => passages.value.map((p) => ({ column: p.column, label: p.startNumber })))
 const columnTime = computed(() => recording.value?.columnTimestamps[column.value] ?? null)
 const frameTime = computed(() => front.value?.frameTimestamps[frame.value] ?? null)
 
@@ -241,6 +252,24 @@ const title = computed(() =>
           <dd class="mono" data-testid="time-difference">
             {{ columnTime === null || frameTime === null ? '–' : formatDifferenceMs(columnTime, frameTime) }}
           </dd>
+          <template v-if="recording.raceName">
+            <dt class="text-muted">{{ t('finish.recordings.race') }}</dt>
+            <dd>{{ recording.raceName }}</dd>
+          </template>
+          <dt class="text-muted">{{ t('finish.playback.passages') }}</dt>
+          <dd class="flex flex-wrap gap-1">
+            <span v-if="passages.length === 0">–</span>
+            <UButton
+              v-for="(p, i) in passages"
+              :key="i"
+              size="xs"
+              color="warning"
+              variant="subtle"
+              class="mono"
+              :label="`${p.startNumber} · ${formatClock(p.time)}`"
+              @click="selectColumn(p.column)"
+            />
+          </dd>
           <dd class="col-span-2 mt-2 text-xs text-dimmed">{{ t('finish.playback.keyboardHint') }}</dd>
         </dl>
       </div>
@@ -265,6 +294,7 @@ const title = computed(() =>
         :selected-column="column"
         :zoom-x="zoomX"
         :zoom-y="zoomY"
+        :marks="passageMarks"
         @select="selectColumn"
       />
 

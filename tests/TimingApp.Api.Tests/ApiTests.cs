@@ -67,6 +67,7 @@ public sealed class ApiTests : IAsyncLifetime
     [InlineData("/api/settings")]
     [InlineData("/api/control/status")]
     [InlineData("/api/cameras/devices")]
+    [InlineData("/api/settings/external-control")]
     [InlineData("/api/live/FinishCamera")]
     public async Task Endpoint_WithoutLogin_Returns401(string url)
     {
@@ -97,7 +98,7 @@ public sealed class ApiTests : IAsyncLifetime
     {
         var external = _factory.CreateExternalClient();
 
-        await ReadAsync<FinishRecordingStatus>(await external.PostAsJsonAsync("/api/control/start", new { mode = "Recording" }, Ct));
+        await ReadAsync<FinishRecordingStatus>(await external.PostAsJsonAsync("/api/control/start", new { mode = "Recording", raceName = "Lauf 1" }, Ct));
         var status = await ReadAsync<FinishRecordingStatus>(await external.GetAsync("/api/control/status", Ct));
 
         Assert.Equal(OperatingMode.Recording, status.Mode);
@@ -116,7 +117,7 @@ public sealed class ApiTests : IAsyncLifetime
     {
         var external = _factory.CreateExternalClient(apiKey);
 
-        var response = await external.PostAsJsonAsync("/api/control/start", new { mode = "Recording" }, Ct);
+        var response = await external.PostAsJsonAsync("/api/control/start", new { mode = "Recording", raceName = "Lauf 1" }, Ct);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         var status = await ReadAsync<FinishRecordingStatus>(await _factory.CreateExternalClient().GetAsync("/api/control/status", Ct));
@@ -157,6 +158,76 @@ public sealed class ApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ExternalControlInfo_ForOperator_ShowsKeyAndHeader_AndIsNeverCached()
+    {
+        var client = await _factory.LoginAsync();
+
+        var response = await client.GetAsync("/api/settings/external-control", Ct);
+        var info = JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!;
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(info["enabled"]!.GetValue<bool>());
+        Assert.Equal(TimingAppFactory.ApiKey, info["apiKey"]!.GetValue<string>());
+        Assert.Equal("X-Api-Key", info["apiKeyHeader"]!.GetValue<string>());
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString() ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExternalControlInfo_ForExternalProgram_IsNotAccessible()
+    {
+        var response = await _factory.CreateExternalClient().GetAsync("/api/settings/external-control", Ct);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, "race.nameRequired")]
+    [InlineData("   ", "race.nameRequired")]
+    [InlineData("../Lauf", "race.nameInvalid")]
+    public async Task Szenario_AufnahmeOhneGueltigenRennnamen_IsRejected(string? raceName, string code)
+    {
+        var response = await _factory.CreateExternalClient().PostAsJsonAsync("/api/control/start", new { mode = "Recording", raceName }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(code, await ErrorCodeAsync(response));
+        Assert.Equal(OperatingMode.Stopped, (await ReadAsync<FinishRecordingStatus>(await _factory.CreateExternalClient().GetAsync("/api/control/status", Ct))).Mode);
+    }
+
+    [Fact]
+    public async Task Szenario_PassageInDerVorschau_IsRejected()
+    {
+        var external = _factory.CreateExternalClient();
+        await ReadAsync<FinishRecordingStatus>(await external.PostAsJsonAsync("/api/control/start", new { mode = "Preview" }, Ct));
+
+        var response = await external.PostAsJsonAsync("/api/passages", new { startNumber = "7", time = DateTimeOffset.Now }, Ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("passage.notRecording", await ErrorCodeAsync(response));
+    }
+
+    [Theory]
+    [InlineData("", "passage.startNumberInvalid")]
+    [InlineData("4 2", "passage.startNumberInvalid")]
+    public async Task Passage_InvalidStartNumber_Returns400(string startNumber, string code)
+    {
+        var external = _factory.CreateExternalClient();
+        await ReadAsync<FinishRecordingStatus>(await external.PostAsJsonAsync("/api/control/start", new { mode = "Recording", raceName = "Lauf 1" }, Ct));
+
+        var response = await external.PostAsJsonAsync("/api/passages", new { startNumber, time = DateTimeOffset.Now }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(code, await ErrorCodeAsync(response));
+    }
+
+    [Fact]
+    public async Task Passage_WithoutKey_IsRejected()
+    {
+        var response = await _factory.CreateClient().PostAsJsonAsync("/api/passages", new { startNumber = "7", time = DateTimeOffset.Now }, Ct);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task ApiKey_DoesNotGrantAccessToOperatorEndpoints()
     {
         var response = await _factory.CreateExternalClient().GetAsync("/api/recordings", Ct);
@@ -189,14 +260,20 @@ public sealed class ApiTests : IAsyncLifetime
             Detection = settings.Detection with { PostRollSeconds = 0.5, FrontPreRollSeconds = 0.5, FrontPostRollSeconds = 0.5 },
         }, TimingAppFactory.Json, Ct))).AppliesOnNextStart);
 
-        await ReadAsync<FinishRecordingStatus>(await client.PostAsJsonAsync("/api/control/start", new { mode = "Recording" }, Ct));
+        await ReadAsync<FinishRecordingStatus>(await client.PostAsJsonAsync("/api/control/start", new { mode = "Recording", raceName = "Lauf 1" }, Ct));
         await EventuallyAsync(() => ReadAsync<FinishRecordingStatus>(client.GetAsync("/api/control/status", Ct).Result), s => !s.Line.BackgroundLearning && s.FinishCamera.State == CameraState.Running);
         (await client.PutAsJsonAsync("/api/simulator/occupancy", new { occupied = true }, Ct)).EnsureSuccessStatusCode();
-        await Task.Delay(500, Ct);
+        await Task.Delay(250, Ct);
+        var passage = await _factory.CreateExternalClient().PostAsJsonAsync("/api/passages", new { startNumber = "42", time = DateTimeOffset.Now }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, passage.StatusCode);
+        await Task.Delay(250, Ct);
         (await client.PutAsJsonAsync("/api/simulator/occupancy", new { occupied = false }, Ct)).EnsureSuccessStatusCode();
 
         var list = await EventuallyAsync(async () => await ReadAsync<List<RecordingSummary>>(await client.GetAsync("/api/recordings", Ct)), l => l.Count > 0);
         var summary = Assert.Single(list);
+        Assert.Equal("Lauf 1", summary.RaceName);
+        Assert.Equal(["42"], summary.StartNumbers);
+        Assert.True(Directory.Exists(Path.Combine(_factory.DataDirectory, "media", "Lauf 1", summary.Id)));
         Assert.True(summary.HasVideoError);
         Assert.Equal("video.ffmpegMissing", (await ReadAsync<FinishRecordingStatus>(await client.GetAsync("/api/control/status", Ct))).LastProblem?.Code);
 

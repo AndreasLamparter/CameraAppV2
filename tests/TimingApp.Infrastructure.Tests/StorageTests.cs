@@ -37,17 +37,68 @@ public sealed class StorageTests : IDisposable
 
     private async Task<RecordingTarget> CompleteRecordingAsync()
     {
-        var target = await _store.CreateAsync(Start, null, Ct);
+        var target = await _store.CreateAsync(Start, null, null, Ct);
         await File.WriteAllBytesAsync(target.FinishImagePath, new byte[100], Ct);
         await File.WriteAllBytesAsync(target.FrontVideoPath, new byte[50], Ct);
         await _store.CompleteAsync(target, Metadata(target), Ct);
         return target;
     }
 
+    private static RaceName Race(string name) => RaceName.Create(name).Value;
+
+    [Fact]
+    public async Task Szenario_AufnahmenWerdenJeRennenAbgelegt()
+    {
+        var withoutRace = await CompleteRecordingAsync();
+        var target = await _store.CreateAsync(Start, null, Race("Lauf 1"), Ct);
+        await _store.CompleteAsync(target, Metadata(target) with { RaceName = "Lauf 1", Passages = [new PassageInfo("42", 1)] }, Ct);
+
+        Assert.Equal(Path.Combine(_storage.FullDataDirectory, "media", "Lauf 1", target.Id.Value), target.Directory);
+        Assert.NotEqual(withoutRace.Id, target.Id);
+        var listed = (await _store.ListAsync(Ct)).Single(r => r.Id == target.Id.Value);
+        Assert.Equal("Lauf 1", listed.RaceName);
+        Assert.Equal(["42"], listed.StartNumbers);
+        Assert.Equal(2, (await _store.ListAsync(Ct)).Count);
+        Assert.Equal("Lauf 1", (await _store.GetAsync(target.Id, Ct)).Value.RaceName);
+        Assert.True((await _store.GetFileAsync(target.Id, RecordingFile.FinishVideo, Ct)).IsFailure);
+    }
+
+    [Fact]
+    public async Task RecordingIds_AreUniqueAcrossRaces()
+    {
+        var first = await _store.CreateAsync(Start, null, Race("Lauf 1"), Ct);
+        var second = await _store.CreateAsync(Start, null, Race("Lauf 2"), Ct);
+
+        Assert.NotEqual(first.Id, second.Id);
+    }
+
+    [Fact]
+    public async Task UpdatePassages_OfARecordingInARace_RewritesTheMetadata()
+    {
+        var target = await _store.CreateAsync(Start, null, Race("Lauf 1"), Ct);
+        await _store.CompleteAsync(target, Metadata(target) with { RaceName = "Lauf 1" }, Ct);
+
+        var result = await _store.UpdatePassagesAsync(target.Id, [new PassageInfo("7", 5), new PassageInfo("8", 6)], Ct);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(["7", "8"], (await _store.GetAsync(target.Id, Ct)).Value.Passages!.Select(p => p.StartNumber));
+        Assert.Equal(["7", "8"], Assert.Single(await _store.ListAsync(Ct)).StartNumbers);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RecordingInARace_RemovesIt()
+    {
+        var target = await _store.CreateAsync(Start, null, Race("Lauf 1"), Ct);
+        await _store.CompleteAsync(target, Metadata(target), Ct);
+
+        Assert.True((await _store.DeleteAsync(target.Id, Ct)).IsSuccess);
+        Assert.Empty(await _store.ListAsync(Ct));
+    }
+
     [Fact]
     public async Task Szenario_UnvollstaendigeAufnahmeWirdNichtAngezeigt()
     {
-        var target = await _store.CreateAsync(Start, null, Ct);
+        var target = await _store.CreateAsync(Start, null, null, Ct);
         await File.WriteAllBytesAsync(target.FinishImagePath, new byte[100], Ct);
 
         Assert.Empty(await _store.ListAsync(Ct));
@@ -75,8 +126,8 @@ public sealed class StorageTests : IDisposable
     [Fact]
     public async Task CreateAsync_SameStart_GetsUniqueIds()
     {
-        var first = await _store.CreateAsync(Start, null, Ct);
-        var second = await _store.CreateAsync(Start, null, Ct);
+        var first = await _store.CreateAsync(Start, null, null, Ct);
+        var second = await _store.CreateAsync(Start, null, null, Ct);
 
         Assert.NotEqual(first.Id, second.Id);
         Assert.StartsWith(Path.Combine(_storage.FullDataDirectory, "media"), first.Directory, StringComparison.OrdinalIgnoreCase);
@@ -122,7 +173,7 @@ public sealed class StorageTests : IDisposable
         var media = Path.Combine(_storage.FullDataDirectory, "elsewhere");
         await _settings.SaveAsync(FinishRecordingSettings.Default with { MediaDirectory = media }, Ct);
 
-        var target = await _store.CreateAsync(Start, media, Ct);
+        var target = await _store.CreateAsync(Start, media, null, Ct);
         await _store.CompleteAsync(target, Metadata(target), Ct);
 
         Assert.StartsWith(media, target.Directory, StringComparison.OrdinalIgnoreCase);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPage from '@/shell/AppPage.vue'
 import { useLive } from '@/api/live'
@@ -6,6 +7,7 @@ import { useConfirm } from '@/shared/confirm'
 import { useErrorMessage } from '@/shared/useErrorMessage'
 import { formatBytes, formatDateTime, formatSeconds } from '@/shared/format'
 import { useRecordingsStore, type RecordingSummary } from './recordingsStore'
+import { ALL_RACES, filterByRace, hasRecordingsWithoutRace, NO_RACE, raceNames } from './raceFilter'
 
 const { t, locale } = useI18n()
 const recordings = useRecordingsStore()
@@ -13,6 +15,15 @@ const confirm = useConfirm()
 const { showError, showSuccess } = useErrorMessage()
 
 useLive('recordingsChanged', () => void recordings.load().catch(showError), () => recordings.load().catch(() => undefined), 5000)
+
+/** Filter by race (FS2-05). */
+const race = ref(ALL_RACES)
+const raceItems = computed(() => [
+  { value: ALL_RACES, label: t('finish.recordings.allRaces') },
+  ...raceNames(recordings.items).map((name) => ({ value: name, label: name })),
+  ...(hasRecordingsWithoutRace(recordings.items) ? [{ value: NO_RACE, label: t('finish.recordings.noRace') }] : []),
+])
+const shown = computed(() => filterByRace(recordings.items, race.value))
 
 async function remove(recording: RecordingSummary): Promise<void> {
   const confirmed = await confirm({
@@ -36,11 +47,23 @@ async function remove(recording: RecordingSummary): Promise<void> {
 
 <template>
   <AppPage id="recordings" :title="t('finish.recordings.title')">
+    <template #actions>
+      <USelect
+        v-if="recordings.items.length > 0"
+        v-model="race"
+        :items="raceItems"
+        icon="i-lucide-flag"
+        class="w-56"
+        :aria-label="t('finish.recordings.race')"
+      />
+    </template>
     <p v-if="recordings.loaded && recordings.items.length === 0" class="text-muted">{{ t('finish.recordings.empty') }}</p>
     <table v-else class="w-full text-sm">
       <thead class="text-left text-muted">
         <tr>
           <th class="py-2">{{ t('finish.recordings.startedAt') }}</th>
+          <th>{{ t('finish.recordings.race') }}</th>
+          <th>{{ t('finish.recordings.startNumbers') }}</th>
           <th>{{ t('finish.recordings.duration') }}</th>
           <th>{{ t('finish.recordings.lineRate') }}</th>
           <th>{{ t('finish.recordings.frontVideo') }}</th>
@@ -49,13 +72,15 @@ async function remove(recording: RecordingSummary): Promise<void> {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="r in recordings.items" :key="r.id" class="border-t border-default">
+        <tr v-for="r in shown" :key="r.id" class="border-t border-default">
           <td class="py-2">
             <RouterLink :to="{ name: 'playback', params: { id: r.id } }" class="font-medium text-primary hover:underline">
               {{ formatDateTime(r.startedAt, locale) }}
             </RouterLink>
             <UBadge v-if="r.hasVideoError" color="warning" variant="subtle" size="sm" class="ml-2" :label="t('finish.recordings.videoError')" />
           </td>
+          <td>{{ r.raceName ?? '–' }}</td>
+          <td class="mono">{{ r.startNumbers?.length ? r.startNumbers.join(', ') : '–' }}</td>
           <td class="mono">{{ formatSeconds(r.durationSeconds) }}</td>
           <td class="mono">{{ r.lineRate.toFixed(1) }} /s</td>
           <td>{{ r.hasFrontVideo ? t('common.yes') : t('common.no') }}</td>

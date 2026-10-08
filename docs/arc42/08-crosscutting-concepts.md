@@ -15,16 +15,21 @@
 ├── settings.json                 Einstellungen (DurableFile)
 ├── logs/timingapp-YYYYMMDD.log   Serilog
 └── media/                        Standard-Medienordner
-    └── 20261007-095959-500/      RecordingId (UTC der ersten Spalte), ggf. Suffix -n
-        ├── finish.png            Zielbild mit Zeitleiste
-        ├── finish.mp4            Zielvideo (falls erzeugt)
-        ├── front.mp4             Frontvideo (falls erzeugt)
-        └── recording.json        Metadaten und Zeitstempel – zuletzt, atomar
+    ├── Lauf 1/                   Ordner je Rennen (RaceName, FS2-04)
+    │   └── 20261007-095959-500/  RecordingId (UTC der ersten Spalte), ggf. Suffix -n, eindeutig über alle Rennen
+    │       ├── finish.png        Zielbild mit Zeitleiste
+    │       ├── finish.mp4        Zielvideo (falls erzeugt)
+    │       ├── front.mp4         Frontvideo (falls erzeugt)
+    │       └── recording.json    Metadaten, Zeitstempel, Rennen, Passagen – zuletzt, atomar
+    └── 20261006-120000-000/      ältere Aufnahme ohne Rennen
 ```
 
 - Kritische Dateien schreibt `DurableFile`: temporäre Datei, Flush auf Datenträger, atomares Ersetzen.
 - Ein Verzeichnis ohne `recording.json` ist unvollständig und wird nie gelistet oder ausgeliefert.
 - Beim Löschen wird `recording.json` zuerst entfernt.
+- Eine Aufnahme wird über ihre ID in allen Rennordnern gesucht; ein Ordner mit `recording.json` und gültigem
+  ID-Namen ist eine Aufnahme, jeder andere Ordner im Medienordner ein Rennen.
+- Später eintreffende Passagen ersetzen `recording.json` atomar (`DurableFile`).
 - IDs aus Anfragen werden gegen ein festes Muster geprüft (`RecordingId.Parse`), Dateinamen sind eine feste Liste
   (`RecordingFile`): kein Pfad aus Benutzereingaben.
 - Keine Datenbank in Feature Set 1 (Kapitel 9).
@@ -44,6 +49,8 @@
 - Erwartete Fehler sind `Result`/`Error` mit stabilen Codes, über HTTP als ProblemDetails mit `code` und `params`.
 - Codes von FS-1: `access.wrongPin`, `control.modeInvalid`, `settings.*`, `recording.notFound`,
   `recording.fileNotFound`, `recording.saveFailed`, `camera.openFailed`, `camera.notFound`, `camera.modeNotSupported`, `camera.noFrames`,
+  `race.nameRequired`, `race.nameInvalid`, `passage.notRecording`, `passage.startNumberInvalid`,
+  `passage.timeRequired`,
   `camera.captureFailed`, `video.ffmpegMissing`, `video.encodingFailed`, `simulator.disabled`.
 - Kamerafehler erscheinen je Kamera im Status, Speicherprobleme als `LastProblem` und in den Metadaten.
 - Warnungen, die die Aufnahme nicht stoppen, erscheinen je Kamera als `warningCode` (z. B. `camera.exposureNotApplied`).
@@ -52,7 +59,8 @@
 
 | Besitzer | Zustand | Übergabe |
 |---|---|---|
-| Capture-Thread (`CameraWorker`) | Quelle, Mat, Bildraten-Messung | Column-Channel, Kompressions-Queue, unveränderliche Arrays |
+| Capture-Thread (`CameraWorker`) | Quelle, Mat, Bildraten-Messung | Decoder-Queue (begrenzt, nie blockierend), Column-Channel, Kompressions-Queue, unveränderliche Arrays |
+| `ParallelFinishDecoder` | Worker-Tasks, Umsortierung | Spalten in Aufnahmereihenfolge unter einer Sperre an Column-Channel und `LiveStrip` |
 | Verarbeitungsschleife (`CaptureSession`) | Hintergrund, Ereignis, Spaltenpuffer, Linienrate | Unveränderlicher `LineStatus`, `RecordingDraft` an den Saver |
 | `RecordingSaver` | Speicher-Queue | Ein Leser; Zähler `Pending` |
 | `FinishRecordingService` | Aktuelle Sitzung | Befehle über `SemaphoreSlim` serialisiert; Auslöser und Neu-Lernen als volatile Flags |

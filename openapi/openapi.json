@@ -5,6 +5,55 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/passages": {
+      "post": {
+        "tags": [
+          "Control"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PassageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassageReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/control/shutdown": {
       "post": {
         "tags": [
@@ -460,6 +509,25 @@
         }
       }
     },
+    "/api/settings/external-control": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalControlInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cameras/devices": {
       "get": {
         "tags": [
@@ -689,11 +757,41 @@
           }
         }
       },
+      "ExternalControlInfo": {
+        "required": [
+          "enabled",
+          "apiKey",
+          "apiKeyHeader",
+          "baseUrls"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "apiKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apiKeyHeader": {
+            "type": "string"
+          },
+          "baseUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "FinishEventEnd": {
         "enum": [
           "PostRoll",
           "MaxDuration",
-          "Stopped"
+          "Stopped",
+          "Passage"
         ]
       },
       "FinishLineDto": {
@@ -773,6 +871,12 @@
           "serverTime": {
             "type": "string",
             "format": "date-time"
+          },
+          "raceName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -913,6 +1017,60 @@
           "Recording"
         ]
       },
+      "PassageInfo": {
+        "required": [
+          "startNumber",
+          "time"
+        ],
+        "type": "object",
+        "properties": {
+          "startNumber": {
+            "type": "string"
+          },
+          "time": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PassageReceipt": {
+        "required": [
+          "startNumber",
+          "time"
+        ],
+        "type": "object",
+        "properties": {
+          "startNumber": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PassageRequest": {
+        "required": [
+          "startNumber",
+          "time"
+        ],
+        "type": "object",
+        "properties": {
+          "startNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "time": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "PreviewKind": {
         "enum": [
           "FinishCamera",
@@ -1052,6 +1210,21 @@
           "frontOffsetMs": {
             "type": "integer",
             "format": "int32"
+          },
+          "raceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "passages": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PassageInfo"
+            }
           }
         }
       },
@@ -1091,6 +1264,21 @@
           "sizeBytes": {
             "type": "integer",
             "format": "int64"
+          },
+          "raceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startNumbers": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -1159,6 +1347,11 @@
           },
           "detection": {
             "$ref": "#/components/schemas/DetectionDto"
+          },
+          "passageOffsetMs": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -1200,6 +1393,12 @@
         "properties": {
           "mode": {
             "$ref": "#/components/schemas/OperatingMode"
+          },
+          "raceName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

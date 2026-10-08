@@ -4,11 +4,15 @@ using TimingApp.Domain.FinishRecording;
 
 namespace TimingApp.Api.Endpoints;
 
-public sealed record StartRequest(OperatingMode Mode);
+/// <summary>Start or switch the mode; Recording needs the name of the race (FS2-01).</summary>
+public sealed record StartRequest(OperatingMode Mode, string? RaceName = null);
+
+/// <summary>A passage of the timing system (FS2-10): start number and passage time with time zone.</summary>
+public sealed record PassageRequest(string? StartNumber, DateTimeOffset? Time);
 
 public sealed record TriggerRequest(bool Active);
 
-/// <summary>Operating commands for the UI and for external programs (FS1-50, FS1-60).</summary>
+/// <summary>Operating commands and passages for the UI and for external programs (FS1-50, FS1-60, FS2-10).</summary>
 internal static class ControlEndpoints
 {
     public static void MapControlEndpoints(this IEndpointRouteBuilder app)
@@ -20,7 +24,7 @@ internal static class ControlEndpoints
 
         group.MapPost("/start", async (StartRequest request, FinishRecordingService service, CancellationToken ct) =>
         {
-            var result = await service.StartAsync(request.Mode, ct);
+            var result = await service.StartAsync(request.Mode, request.RaceName, ct);
             return result.IsSuccess ? Results.Ok(service.GetStatus()) : HttpResults.Problem(result.Error!);
         }).Produces<FinishRecordingStatus>().ProducesErrors(400);
 
@@ -35,6 +39,13 @@ internal static class ControlEndpoints
             service.SetManualTrigger(request.Active);
             return Results.Ok(service.GetStatus());
         }).Produces<FinishRecordingStatus>();
+
+        // Passages (FS2-10, FS2-16): accepted and assigned to a recording asynchronously.
+        app.MapPost("/api/passages", (PassageRequest request, FinishRecordingService service) =>
+        {
+            var result = service.ReportPassage(request.StartNumber, request.Time);
+            return result.IsSuccess ? Results.Accepted(value: result.Value) : HttpResults.Problem(result.Error!);
+        }).WithTags("Control").RequireAuthorization(AccessPolicies.Control).Produces<PassageReceipt>(StatusCodes.Status202Accepted).ProducesErrors(400, 409);
 
         group.MapPost("/background/relearn", (FinishRecordingService service) =>
         {

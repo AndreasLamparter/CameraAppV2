@@ -192,10 +192,11 @@ internal sealed class InMemoryRecordingStore : IRecordingStore
         }
     }
 
-    public Task<RecordingTarget> CreateAsync(DateTimeOffset start, string? mediaDirectory, CancellationToken cancellationToken)
+    public Task<RecordingTarget> CreateAsync(DateTimeOffset start, string? mediaDirectory, RaceName? race, CancellationToken cancellationToken)
     {
         var id = RecordingId.For(start, Created.Count(t => t.Id.Value.StartsWith(RecordingId.For(start).Value, StringComparison.Ordinal)));
-        var target = new RecordingTarget(id, $"media/{id}", $"media/{id}/finish.png", $"media/{id}/finish.mp4", $"media/{id}/front.mp4");
+        var directory = race is null ? $"media/{id}" : $"media/{race.Value}/{id}";
+        var target = new RecordingTarget(id, directory, $"{directory}/finish.png", $"{directory}/finish.mp4", $"{directory}/front.mp4");
         Created.Add(target);
         return Task.FromResult(target);
     }
@@ -225,6 +226,20 @@ internal sealed class InMemoryRecordingStore : IRecordingStore
         lock (_complete)
         {
             return Task.FromResult(_complete.RemoveAll(m => m.Id == id.Value) > 0 ? Result.Success() : Result.Failure(Error.NotFound("recording.notFound")));
+        }
+    }
+
+    public Task<Result> UpdatePassagesAsync(RecordingId id, IReadOnlyList<PassageInfo> passages, CancellationToken cancellationToken)
+    {
+        lock (_complete)
+        {
+            var index = _complete.FindIndex(m => m.Id == id.Value);
+            if (index < 0)
+            {
+                return Task.FromResult(Result.Failure(Error.NotFound("recording.notFound")));
+            }
+            _complete[index] = _complete[index] with { Passages = passages };
+            return Task.FromResult(Result.Success());
         }
     }
 }

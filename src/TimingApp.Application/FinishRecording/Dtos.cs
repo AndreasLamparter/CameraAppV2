@@ -38,7 +38,14 @@ public sealed record FinishRecordingStatus(
     LineOverlay? Overlay,
     int PendingSaves,
     SaveProblem? LastProblem,
-    DateTimeOffset ServerTime);
+    DateTimeOffset ServerTime,
+    string? RaceName = null);
+
+/// <summary>A passage of a recording (FS2-14): start number and passage time in Unix microseconds.</summary>
+public sealed record PassageInfo(string StartNumber, long Time);
+
+/// <summary>Answer to a reported passage: the start number and the passage time after the offset (FS2-18).</summary>
+public sealed record PassageReceipt(string StartNumber, DateTimeOffset Time);
 
 /// <summary>Result of a video of a recording; <see cref="ErrorCode"/> is set when the video could not be created.</summary>
 public sealed record VideoInfo(bool Available, string? ErrorCode);
@@ -66,7 +73,9 @@ public sealed record RecordingMetadata(
     VideoInfo FinishVideo,
     FrontVideoInfo? FrontVideo,
     int FinishOffsetMs,
-    int FrontOffsetMs);
+    int FrontOffsetMs,
+    string? RaceName = null,
+    IReadOnlyList<PassageInfo>? Passages = null);
 
 /// <summary>Entry of the recording list (FS1-61).</summary>
 public sealed record RecordingSummary(
@@ -76,7 +85,9 @@ public sealed record RecordingSummary(
     double LineRate,
     bool HasFrontVideo,
     bool HasVideoError,
-    long SizeBytes);
+    long SizeBytes,
+    string? RaceName = null,
+    IReadOnlyList<string>? StartNumbers = null);
 
 /// <summary>Capture settings of one camera; <see cref="DeviceName"/> (and <see cref="DevicePath"/>) select the device, otherwise <see cref="DeviceIndex"/>.</summary>
 public sealed record CameraSettingsDto(
@@ -107,7 +118,8 @@ public sealed record SettingsDto(
     CameraSettingsDto FrontCamera,
     bool FrontCameraEnabled,
     FinishLineDto FinishLine,
-    DetectionDto Detection);
+    DetectionDto Detection,
+    int PassageOffsetMs = 0);
 
 /// <summary>Settings with the effective media directory and whether a change only applies after restarting the cameras (FS1-44).</summary>
 public sealed record SettingsResponse(SettingsDto Settings, string EffectiveMediaDirectory, bool AppliesOnNextStart);
@@ -128,7 +140,8 @@ public static class SettingsMapping
             s.Detection.PostRoll.TotalSeconds,
             s.Detection.MaxDuration.TotalSeconds,
             s.Detection.FrontPreRoll.TotalSeconds,
-            s.Detection.FrontPostRoll.TotalSeconds));
+            s.Detection.FrontPostRoll.TotalSeconds),
+        s.PassageOffsetMs);
 
     public static FinishRecordingSettings ToDomain(this SettingsDto d) => new(
         string.IsNullOrWhiteSpace(d.MediaDirectory) ? null : d.MediaDirectory.Trim(),
@@ -143,7 +156,8 @@ public static class SettingsMapping
             Seconds(d.Detection.PostRollSeconds),
             Seconds(d.Detection.MaxDurationSeconds),
             Seconds(d.Detection.FrontPreRollSeconds),
-            Seconds(d.Detection.FrontPostRollSeconds)));
+            Seconds(d.Detection.FrontPostRollSeconds)),
+        d.PassageOffsetMs);
 
     private static CameraSettingsDto ToDto(CameraSettings c) =>
         new(c.DeviceIndex, c.Width, c.Height, c.FrameRate, c.Exposure, c.OffsetMs, c.Device?.Name, c.Device?.Path);

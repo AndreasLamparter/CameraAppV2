@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPage from '@/shell/AppPage.vue'
 import { useLive } from '@/api/live'
@@ -9,10 +9,11 @@ import { formatClock } from '@/shared/format'
 import { useControlStore, type FinishStatus, type OperatingMode } from './controlStore'
 import { cameraColor, lineColor, modeColor } from './statusColors'
 import LivePreview from './LivePreview.vue'
+import RaceDialog from './RaceDialog.vue'
 
 const { t, te } = useI18n()
 const control = useControlStore()
-const { showError } = useErrorMessage()
+const { showError, messageOf } = useErrorMessage()
 const { connected } = useLive<FinishStatus>('status', control.apply, () => control.load().catch(() => undefined), 1000)
 
 const status = computed(() => control.status)
@@ -28,6 +29,41 @@ async function command(action: () => Promise<void>): Promise<void> {
 
 const start = (mode: OperatingMode) => command(() => control.start(mode))
 const stop = () => command(() => control.stop())
+
+const LAST_RACE_KEY = 'finish.lastRace'
+
+function lastRace(): string {
+  try {
+    return localStorage.getItem(LAST_RACE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** Recording starts only with a race name from the dialog (FS2-01); starting again changes the race (FS2-02). */
+const raceDialogOpen = ref(false)
+const raceError = ref<string | null>(null)
+const raceInitial = computed(() => status.value?.raceName ?? lastRace())
+
+function askRace(): void {
+  raceError.value = null
+  raceDialogOpen.value = true
+}
+
+async function startRecording(name: string): Promise<void> {
+  raceError.value = null
+  try {
+    await control.start('Recording', name)
+    try {
+      localStorage.setItem(LAST_RACE_KEY, name)
+    } catch {
+      // Remembering the name is a convenience only.
+    }
+    raceDialogOpen.value = false
+  } catch (e) {
+    raceError.value = messageOf(e)
+  }
+}
 const toggleTrigger = () => command(() => control.setTrigger(!status.value?.line.manualTrigger))
 const relearn = () => command(() => control.relearn())
 
@@ -58,6 +94,15 @@ const cameras = computed(() => {
 <template>
   <AppPage id="live" :title="t('finish.live.title')">
     <template #actions>
+      <UBadge
+        v-if="status?.mode === 'Recording' && status.raceName"
+        icon="i-lucide-flag"
+        color="neutral"
+        variant="subtle"
+        size="lg"
+        :label="status.raceName"
+        data-testid="race-badge"
+      />
       <UBadge v-if="status" :color="modeColor(status.mode)" variant="subtle" size="lg" :label="t(`finish.mode.${status.mode}`)" />
     </template>
     <template #toolbar>
@@ -76,7 +121,7 @@ const cameras = computed(() => {
             :label="t('finish.live.startRecording')"
             :variant="status?.mode === 'Recording' ? 'solid' : 'outline'"
             :disabled="control.busy"
-            @click="start('Recording')"
+            @click="askRace"
           />
           <UButton
             icon="i-lucide-square"
@@ -176,5 +221,6 @@ const cameras = computed(() => {
       :title="t('finish.live.lastProblem')"
       :description="`${formatClock(status.lastProblem.at)} – ${errorText(status.lastProblem.code)}`"
     />
+    <RaceDialog v-model:open="raceDialogOpen" :initial-name="raceInitial" :busy="control.busy" :error="raceError" @confirm="startRecording" />
   </AppPage>
 </template>

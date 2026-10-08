@@ -19,8 +19,10 @@ internal static class StoreJson
 }
 
 /// <summary>
-/// Recordings on the file system: one directory per recording below the media directory. <c>recording.json</c> is
+/// Recordings on the file system: one directory per recording in the directory of its race below the media directory
+/// (FS2-04); recordings without race (older ones) lie directly in the media directory. <c>recording.json</c> is
 /// written last through <see cref="DurableFile"/>; a directory without it is incomplete and never listed (FS1-42).
+/// Recording ids are unique across all races, so a recording is found by its id alone.
 /// </summary>
 internal sealed class FileRecordingStore(
     ISettingsStore settings,
@@ -34,18 +36,19 @@ internal sealed class FileRecordingStore(
 
     private readonly ConcurrentDictionary<string, (DateTime Written, RecordingSummary Summary)> _summaries = new();
 
-    public Task<RecordingTarget> CreateAsync(DateTimeOffset start, string? mediaDirectory, CancellationToken cancellationToken)
+    public Task<RecordingTarget> CreateAsync(DateTimeOffset start, string? mediaDirectory, RaceName? race, CancellationToken cancellationToken)
     {
         var root = media.Resolve(mediaDirectory);
-        Directory.CreateDirectory(root);
+        var parent = race is null ? root : Path.Combine(root, race.Value);
+        Directory.CreateDirectory(parent);
         for (var suffix = 0; ; suffix++)
         {
             var id = RecordingId.For(start, suffix);
-            var directory = Path.Combine(root, id.Value);
-            if (Directory.Exists(directory))
+            if (Find(root, id) is not null)
             {
                 continue;
             }
+            var directory = Path.Combine(parent, id.Value);
             Directory.CreateDirectory(directory);
             return Task.FromResult(new RecordingTarget(
                 id,
@@ -73,15 +76,9 @@ internal sealed class FileRecordingStore(
             return [];
         }
         var result = new List<RecordingSummary>();
-        foreach (var directory in Directory.EnumerateDirectories(root))
+        foreach (var directory in RecordingDirectories(root))
         {
-            var id = RecordingId.Parse(Path.GetFileName(directory));
-            var metadataPath = Path.Combine(directory, MetadataFile);
-            if (id.IsFailure || !File.Exists(metadataPath))
-            {
-                continue;
-            }
-            if (await SummaryAsync(directory, metadataPath, cancellationToken).ConfigureAwait(false) is { } summary)
+            if (await SummaryAsync(directory, Path.Combine(directory, MetadataFile), cancellationToken).ConfigureAwait(false) is { } summary)
             {
                 result.Add(summary);
             }
@@ -91,15 +88,15 @@ internal sealed class FileRecordingStore(
 
     public async Task<Result<RecordingMetadata>> GetAsync(RecordingId id, CancellationToken cancellationToken)
     {
-        var directory = Path.Combine(await RootAsync(cancellationToken).ConfigureAwait(false), id.Value);
-        var metadata = await ReadMetadataAsync(Path.Combine(directory, MetadataFile), cancellationToken).ConfigureAwait(false);
+        var directory = Find(await RootAsync(cancellationToken).ConfigureAwait(false), id);
+        var metadata = directory is null ? null : await ReadMetadataAsync(Path.Combine(directory, MetadataFile), cancellationToken).ConfigureAwait(false);
         return metadata is null ? Error.NotFound("recording.notFound") : metadata;
     }
 
     public async Task<Result<string>> GetFileAsync(RecordingId id, RecordingFile file, CancellationToken cancellationToken)
     {
-        var directory = Path.Combine(await RootAsync(cancellationToken).ConfigureAwait(false), id.Value);
-        if (!File.Exists(Path.Combine(directory, MetadataFile)))
+        var directory = Find(await RootAsync(cancellationToken).ConfigureAwait(false), id);
+        if (directory is null || !File.Exists(Path.Combine(directory, MetadataFile)))
         {
             return Error.NotFound("recording.notFound");
         }
@@ -115,9 +112,9 @@ internal sealed class FileRecordingStore(
 
     public async Task<Result> DeleteAsync(RecordingId id, CancellationToken cancellationToken)
     {
-        var directory = Path.Combine(await RootAsync(cancellationToken).ConfigureAwait(false), id.Value);
-        var metadataPath = Path.Combine(directory, MetadataFile);
-        if (!File.Exists(metadataPath))
+        var directory = Find(await RootAsync(cancellationToken).ConfigureAwait(false), id);
+        var metadataPath = directory is null ? string.Empty : Path.Combine(directory, MetadataFile);
+        if (directory is null || !File.Exists(metadataPath))
         {
             return Error.NotFound("recording.notFound");
         }
@@ -127,6 +124,58 @@ internal sealed class FileRecordingStore(
         TryDeleteDirectory(directory);
         return Result.Success();
     }
+
+    public async Task<Result> UpdatePassagesAsync(RecordingId id, IReadOnlyList<PassageInfo> passages, CancellationToken cancellationToken)
+    {
+        var directory = Find(await RootAsync(cancellationToken).ConfigureAwait(false), id);
+        var metadataPath = directory is null ? string.Empty : Path.Combine(directory, MetadataFile);
+        var metadata = directory is null ? null : await ReadMetadataAsync(metadataPath, cancellationToken).ConfigureAwait(false);
+        if (metadata is null)
+        {
+            return Error.NotFound("recording.notFound");
+        }
+        var json = JsonSerializer.Serialize(metadata with { Passages = passages }, StoreJson.Options);
+        await DurableFile.WriteAllTextAsync(metadataPath, json, cancellationToken).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    /// <summary>Directory of a recording: directly in the media directory (without race) or in a race directory.</summary>
+    private static string? Find(string root, RecordingId id)
+    {
+        if (!Directory.Exists(root))
+        {
+            return null;
+        }
+        var direct = Path.Combine(root, id.Value);
+        if (Directory.Exists(direct))
+        {
+            return direct;
+        }
+        return Directory.EnumerateDirectories(root)
+            .Where(d => !IsRecording(d))
+            .Select(race => Path.Combine(race, id.Value))
+            .FirstOrDefault(Directory.Exists);
+    }
+
+    /// <summary>Complete recordings directly in the media directory and in its race directories.</summary>
+    private static IEnumerable<string> RecordingDirectories(string root)
+    {
+        foreach (var directory in Directory.EnumerateDirectories(root))
+        {
+            if (IsRecording(directory))
+            {
+                yield return directory;
+                continue;
+            }
+            foreach (var inRace in Directory.EnumerateDirectories(directory).Where(IsRecording))
+            {
+                yield return inRace;
+            }
+        }
+    }
+
+    private static bool IsRecording(string directory) =>
+        RecordingId.Parse(Path.GetFileName(directory)).IsSuccess && File.Exists(Path.Combine(directory, MetadataFile));
 
     private async Task<string> RootAsync(CancellationToken cancellationToken) =>
         media.Resolve((await settings.GetAsync(cancellationToken).ConfigureAwait(false)).MediaDirectory);
@@ -151,7 +200,9 @@ internal sealed class FileRecordingStore(
             metadata.LineRate,
             metadata.FrontVideo?.Available == true,
             !metadata.FinishVideo.Available || metadata.FrontVideo is { Available: false },
-            size);
+            size,
+            metadata.RaceName,
+            metadata.Passages?.Select(p => p.StartNumber).ToList() ?? []);
         _summaries[directory] = (written, summary);
         return summary;
     }

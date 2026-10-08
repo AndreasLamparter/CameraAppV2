@@ -16,3 +16,5 @@ definiert. Hier nur die technischen Begriffe.
 | Lernphase | Mittelung der ersten 30 Spalten zum Hintergrund | `FinishLineMonitor.LearningColumns` |
 | Laufendes Zielbild | Live-Zielbild der letzten Sekunden | `LiveStrip`, `PreviewKind.FinishStrip` |
 | Metadaten | `recording.json`, zuletzt geschrieben; markiert eine Aufnahme als vollständig | `RecordingMetadata` |
+| Rennordner | Unterordner des Medienordners je Rennen; Name = Rennname | `RaceName`, `FileRecordingStore` |
+| Passage | Meldung der Zeitmessung (Startnummer, Passagezeit), einer Aufnahme zugeordnet | `Passage`, `RecordingPassages`, `PassageInfo` |

@@ -3,7 +3,7 @@
 Lebende Dokumentation: Sie beschreibt, wie das System **aktuell** gebaut ist. Was das System leisten muss, steht in
 [`docs/requirements/`](../requirements/); wie wir bauen, in [`CLAUDE.md`](../../CLAUDE.md).
 
-Last reviewed: 2026-10-08 (Kameraauswahl per Name und Gerätepfad, Aufnahmemodi, Bilddrehung, Media Foundation über Vortice)
+Last reviewed: 2026-10-08 (Kameraauswahl per Name und Gerätepfad, Aufnahmemodi, Bilddrehung, Media Foundation über Vortice, parallele Dekodierung, laufendes Zielbild, Endpunkte für die Zeitmessung, Feature Set 2: Rennen und Startnummern)
 
 | Kapitel | Inhalt |
 |---|---|

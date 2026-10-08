@@ -12,8 +12,11 @@ async function login(page: Page): Promise<void> {
 test('Zielaufnahme über die Oberfläche', async ({ page }) => {
   await login(page)
 
-  // Aufnahme starten: both cameras report a frame rate.
+  // Aufnahme starten with a race name (FS2-01): both cameras report a frame rate.
   await page.getByRole('button', { name: 'Aufnahme', exact: true }).click()
+  await page.getByTestId('race-name').fill('Lauf 1')
+  await page.getByRole('button', { name: 'Aufnahme starten' }).click()
+  await expect(page.getByTestId('race-badge')).toHaveText('Lauf 1')
   await expect(page.getByTestId('finishCamera-fps')).not.toContainText('0.0 /s', { timeout: 10_000 })
   await expect(page.getByTestId('frontCamera-fps')).not.toContainText('0.0 /s')
   await expect(page.getByAltText('Zielkamera')).toBeVisible()
@@ -33,6 +36,7 @@ test('Zielaufnahme über die Oberfläche', async ({ page }) => {
   const rows = page.locator('tbody tr')
   await expect(rows).toHaveCount(1)
   await expect(rows.first()).toContainText('Video fehlt')
+  await expect(rows.first()).toContainText('Lauf 1')
 
   // Playback: a click into the finish image selects a column and shows its time.
   await rows.first().getByRole('link').click()

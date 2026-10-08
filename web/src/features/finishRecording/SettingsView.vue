@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPage from '@/shell/AppPage.vue'
+import ExternalControlCard from './ExternalControlCard.vue'
 import { api, unwrap, type Schemas } from '@/api/client'
 import { useErrorMessage } from '@/shared/useErrorMessage'
 import { useControlStore } from './controlStore'
@@ -293,6 +294,17 @@ const cameraSections = computed(() => [
           </UFormField>
         </div>
       </UCard>
+
+      <UCard>
+        <template #header>{{ t('finish.settings.timing') }}</template>
+        <UFormField :label="t('finish.settings.passageOffset')" :help="t('finish.settings.passageOffsetHint')">
+          <UInput v-model.number="settings.passageOffsetMs" type="number" class="w-full" />
+        </UFormField>
+      </UCard>
     </form>
+
+    <div class="mt-4 grid gap-4 xl:grid-cols-2">
+      <ExternalControlCard />
+    </div>
   </AppPage>
 </template>

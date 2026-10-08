@@ -198,9 +198,14 @@ public sealed record FinishRecordingSettings(
     CameraSettings FrontCamera,
     bool FrontCameraEnabled,
     FinishLineSettings FinishLine,
-    DetectionSettings Detection)
+    DetectionSettings Detection,
+    int PassageOffsetMs = 0)
 {
     public const int MaxMediaDirectoryLength = 240;
+    public const int MaxPassageOffsetMs = 10_000;
+
+    /// <summary>Correction added to every passage time reported by the timing system (FS2-18).</summary>
+    public TimeSpan PassageOffset => TimeSpan.FromMilliseconds(PassageOffsetMs);
 
     /// <summary>Standard values; detection values from FS1-26.</summary>
     public static FinishRecordingSettings Default { get; } = new(
@@ -225,6 +230,10 @@ public sealed record FinishRecordingSettings(
              MediaDirectory.IndexOfAny(Path.GetInvalidPathChars()) >= 0))
         {
             return Error.Validation("settings.mediaDirectoryInvalid", new Dictionary<string, object?> { ["max"] = MaxMediaDirectoryLength });
+        }
+        if (PassageOffsetMs is < -MaxPassageOffsetMs or > MaxPassageOffsetMs)
+        {
+            return Error.Validation("settings.passageOffsetInvalid", new Dictionary<string, object?> { ["min"] = -MaxPassageOffsetMs, ["max"] = MaxPassageOffsetMs });
         }
         var result = FinishCamera.Validate("finish");
         if (result.IsSuccess)

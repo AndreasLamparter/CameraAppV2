@@ -16,9 +16,9 @@ public sealed class FinishRecordingServiceTests : IAsyncLifetime
     [Fact]
     public async Task StartAsync_WhileRunning_SwitchesModeWithoutRestartingCameras()
     {
-        await _app.Service.StartAsync(OperatingMode.Preview, Ct);
+        await _app.Service.StartAsync(OperatingMode.Preview, null, Ct);
 
-        await _app.Service.StartAsync(OperatingMode.Recording, Ct);
+        await _app.Service.StartAsync(OperatingMode.Recording, "Lauf 1", Ct);
 
         Assert.Single(_app.Cameras.Starts);
         Assert.Equal(OperatingMode.Recording, _app.Service.Mode);
@@ -27,7 +27,7 @@ public sealed class FinishRecordingServiceTests : IAsyncLifetime
     [Fact]
     public async Task StartAsync_ModeStopped_IsRejected()
     {
-        var result = await _app.Service.StartAsync(OperatingMode.Stopped, Ct);
+        var result = await _app.Service.StartAsync(OperatingMode.Stopped, null, Ct);
 
         Assert.Equal("control.modeInvalid", result.Error?.Code);
     }
@@ -37,7 +37,7 @@ public sealed class FinishRecordingServiceTests : IAsyncLifetime
     {
         _app.Settings.Settings = FinishRecordingSettings.Default with { FrontCameraEnabled = false };
 
-        await _app.Service.StartAsync(OperatingMode.Recording, Ct);
+        await _app.Service.StartAsync(OperatingMode.Recording, "Lauf 1", Ct);
 
         Assert.Null(_app.Cameras.Starts[0].FrontCamera);
         Assert.Equal(CameraState.Disabled, _app.Service.GetStatus().FrontCamera.State);
@@ -46,10 +46,10 @@ public sealed class FinishRecordingServiceTests : IAsyncLifetime
     [Fact]
     public async Task ModeSwitchToRecording_DuringPreviewEvent_SavesThatEvent()
     {
-        await _app.Service.StartAsync(OperatingMode.Preview, Ct);
+        await _app.Service.StartAsync(OperatingMode.Preview, null, Ct);
         await _app.Session.FeedAsync(Line.Columns(-5, 1, Line.Between(0, 2)));
 
-        await _app.Service.StartAsync(OperatingMode.Recording, Ct);
+        await _app.Service.StartAsync(OperatingMode.Recording, "Lauf 1", Ct);
         await _app.Session.FeedAsync(Line.Columns(1, 6, Line.Between(0, 2)));
         await _app.WaitForRecordingsAsync(1);
 
@@ -59,7 +59,7 @@ public sealed class FinishRecordingServiceTests : IAsyncLifetime
     [Fact]
     public async Task RelearnBackground_AfterLightChange_LineBecomesFreeAgain()
     {
-        await _app.Service.StartAsync(OperatingMode.Preview, Ct);
+        await _app.Service.StartAsync(OperatingMode.Preview, null, Ct);
         await _app.Session.FeedAsync(Line.Columns(-5, -3, Line.Free));
         var darker = Line.Columns(-3, 0, Line.Free).Select(c => c with { Bgr = c.Bgr.Select(b => (byte)(b / 2)).ToArray() }).ToList();
         await _app.Session.FeedAsync(darker.Take(10));
@@ -76,7 +76,7 @@ public sealed class FinishRecordingServiceTests : IAsyncLifetime
     [Fact]
     public async Task Overlay_ReportsLinePositionAsFractionOfTheImage()
     {
-        await _app.Service.StartAsync(OperatingMode.Preview, Ct);
+        await _app.Service.StartAsync(OperatingMode.Preview, null, Ct);
 
         var overlay = _app.Service.GetStatus().Overlay!;
 

@@ -9,14 +9,21 @@ sequenceDiagram
     participant S as CameraSession
     participant L as CaptureSession (Schleife)
     participant B as FrontFrameBuffer
+    participant D as ParallelFinishDecoder (2–4 Worker)
     W->>Src: Grab() blockierend
     W->>W: Zeitstempel = CaptureClock.Now() + Offset
-    W->>Src: Retrieve(Mat)
-    alt Zielkamera
-        W->>S: LineExtractor.Extract → LineColumn
+    alt Zielkamera, Kamera liefert JPEG
+        W->>D: Post(JPEG, Zeitstempel) (Queue voll → verworfen, gezählt)
+        D->>D: ImDecode, LineExtractor.Extract, FramePreview.Offer
+        D->>S: Emit in Aufnahmereihenfolge (Sequenznummer)
         S-->>L: Channel (unbegrenzt, ein Leser)
-        S->>S: LiveStrip.Add, FramePreview.Offer (nur bei Zuschauern)
-    else Frontkamera
+        S->>S: LiveStrip.Add
+    else Zielkamera, anderes Format
+        W->>Src: Retrieve(Mat)
+        W->>S: LineExtractor.Extract → Emit
+    else Frontkamera liefert JPEG
+        W->>B: JPEG unverändert Add
+    else Frontkamera, anderes Format
         W->>S: Mat.Clone → Kompressions-Queue (8, sonst verworfen)
         S->>B: JPEG-Kodierung in eigener Task, Add
     end
@@ -24,7 +31,10 @@ sequenceDiagram
 ```
 
 Der Capture-Thread schreibt keine Dateien, kodiert keine Videos und nimmt keine Sperren, die Start und Stopp
-halten. Die Mat-Instanz eines Threads gehört dem Thread und wird bei seinem Ende freigegeben.
+halten. Er entpackt nur, wenn eine Senke das Bild braucht (`CapturedFrame.Decode`); Kamera-JPEGs der Zielkamera
+entpackt der `ParallelFinishDecoder`, die der Frontkamera werden nicht entpackt. Die Mat-Instanz eines Threads
+gehört dem Thread und wird bei seinem Ende freigegeben. Beim Stoppen arbeitet der Decoder seine Queue ab, bevor
+der Column-Channel abgeschlossen wird.
 
 ## Zielereignis und Speichern
 
@@ -38,6 +48,20 @@ halten. Die Mat-Instanz eines Threads gehört dem Thread und wird bei seinem End
    `front.mp4` und schreibt zuletzt `recording.json`. Erst dann erscheint die Aufnahme in der Liste.
 5. Scheitert ein Video, bleiben Zielbild und Zeitstempel erhalten; der Fehlercode steht in den Metadaten und als
    `LastProblem` im Status.
+
+## Passagen der Zeitmessung (FEATURE-SET-2)
+
+1. `POST /api/passages` → `FinishRecordingService.ReportPassage`: nur im Zustand Aufnahme, Startnummer geprüft,
+   Versatz addiert; die Passage kommt in eine nebenläufige Queue der `CaptureSession` (Antwort 202).
+2. Die Verarbeitungsschleife ordnet sie mit der nächsten Spalte zu, in dieser Reihenfolge:
+   laufendes, zu speicherndes Zielereignis (Passagezeit ab Ereignisbeginn − Vorlauf) → kürzlich gespeicherte
+   Aufnahme, deren Fenster die Passagezeit enthält → wartende Aufnahme um andere Passagen → neue Aufnahme um die
+   Passagezeit (Vorlauf bis Nachlauf, Ende `Passage`). Beginnt ein Zielereignis, übernimmt es wartende Passagen, die
+   in seinem Fenster liegen.
+3. Eine Aufnahme um Passagen wird gespeichert, sobald Spalten bis zu ihrem Ende vorliegen (oder die Kameras
+   stoppen). Ist die Aufnahme schon gespeichert, schreibt der Saver die Passagen über `UpdatePassagesAsync` nach.
+4. Liegt eine Passage mehr als 5 s zurück und sind ihre Spalten nicht mehr gepuffert, wird sie protokolliert und
+   verworfen.
 
 ## Stoppen und Beenden
 

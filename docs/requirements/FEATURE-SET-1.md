@@ -209,7 +209,9 @@ Neue Aufnahmen erscheinen ohne manuelles Neuladen.
 **FS1-63** Aufnahmen können einzeln gelöscht werden, jeweils nach Bestätigung.
 
 **FS1-64** Einstellungen: Speicherort, beide Kameras (Gerät, Auflösung, Bildrate, Belichtung,
-Offset; Frontkamera zusätzlich aktiv/inaktiv), Ziellinie, Zielereignis-Werte aus FS1-26.
+Offset; Frontkamera zusätzlich aktiv/inaktiv), Ziellinie, Zielereignis-Werte aus FS1-26. Zusätzlich zeigen
+die Einstellungen die Aufrufe für externe Programme aus FS1-50 mit der Adresse dieses Rechners und den
+Schlüssel der externen Steuerung (verdeckt, aufdeckbar) zum Kopieren an.
 
 **FS1-65** Die Oberfläche ist auf Deutsch und Englisch verfügbar.
 

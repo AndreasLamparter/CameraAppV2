@@ -11,6 +11,9 @@ public enum FinishEventEnd
 
     /// <summary>The cameras were stopped during the event (FS1-03).</summary>
     Stopped,
+
+    /// <summary>No event was detected; the recording was made around a reported passage (FS2-12).</summary>
+    Passage,
 }
 
 /// <summary>A completed finish event: from the first occupied column to the end of the post-roll (or the cut).</summary>

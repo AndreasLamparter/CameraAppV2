@@ -123,8 +123,11 @@ public enum RecordingFile
 /// <summary>Durable storage of recordings on the file system (FS1-41, FS1-42).</summary>
 public interface IRecordingStore
 {
-    /// <summary>Creates the (still incomplete) directory of a new recording; <paramref name="mediaDirectory"/> null means the default.</summary>
-    Task<RecordingTarget> CreateAsync(DateTimeOffset start, string? mediaDirectory, CancellationToken cancellationToken);
+    /// <summary>
+    /// Creates the (still incomplete) directory of a new recording in the directory of its race (FS2-04);
+    /// <paramref name="mediaDirectory"/> null means the default, <paramref name="race"/> null the media directory itself.
+    /// </summary>
+    Task<RecordingTarget> CreateAsync(DateTimeOffset start, string? mediaDirectory, RaceName? race, CancellationToken cancellationToken);
 
     /// <summary>Writes the metadata last and atomically: only then the recording is complete and listed.</summary>
     Task CompleteAsync(RecordingTarget target, RecordingMetadata metadata, CancellationToken cancellationToken);
@@ -141,6 +144,9 @@ public interface IRecordingStore
     Task<Result<string>> GetFileAsync(RecordingId id, RecordingFile file, CancellationToken cancellationToken);
 
     Task<Result> DeleteAsync(RecordingId id, CancellationToken cancellationToken);
+
+    /// <summary>Replaces the passages of a complete recording (late passage, FS2-11), atomically like the metadata.</summary>
+    Task<Result> UpdatePassagesAsync(RecordingId id, IReadOnlyList<PassageInfo> passages, CancellationToken cancellationToken);
 }
 
 /// <summary>Durable store of the runtime-editable settings.</summary>

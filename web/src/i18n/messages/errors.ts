@@ -28,6 +28,15 @@ const de = {
   simulator: {
     disabled: 'Die Kamerasimulation ist nicht aktiv.',
   },
+  race: {
+    nameRequired: 'Bitte einen Rennnamen eingeben.',
+    nameInvalid: 'Ungültiger Rennname: Buchstaben, Ziffern, Leerzeichen und - _ . (max. {max}), nicht mit Leerzeichen oder Punkt beginnend oder endend.',
+  },
+  passage: {
+    notRecording: 'Passagen werden nur im Zustand Aufnahme angenommen.',
+    startNumberInvalid: 'Ungültige Startnummer (1–{max} Buchstaben, Ziffern oder -).',
+    timeRequired: 'Die Passagezeit fehlt.',
+  },
   settings: {
     mediaDirectoryInvalid: 'Speicherort: bitte einen absoluten Pfad angeben (max. {max} Zeichen).',
     deviceInvalid: 'Gerät: Index zwischen 0 und {max}.',
@@ -40,6 +49,7 @@ const de = {
     lineWidthInvalid: 'Linienbreite zwischen 1 und {max} Pixel.',
     linePositionInvalid: 'Position der Ziellinie zwischen 0 und {max}.',
     rotationInvalid: 'Ungültige Bilddrehung.',
+    passageOffsetInvalid: 'Versatz der Passagezeit zwischen {min} und {max} ms.',
     pixelThresholdInvalid: 'Schwellwert Pixeländerung zwischen {min} und {max}.',
     occupancyThresholdInvalid: 'Schwellwert Belegung zwischen {min} und {max} %.',
     durationInvalid: 'Zeitwert ({field}) zwischen {min} und {max} s.',
@@ -75,6 +85,15 @@ const en: typeof de = {
   simulator: {
     disabled: 'Camera simulation is not active.',
   },
+  race: {
+    nameRequired: 'Please enter a race name.',
+    nameInvalid: 'Invalid race name: letters, digits, spaces and - _ . (max. {max}), not starting or ending with a space or dot.',
+  },
+  passage: {
+    notRecording: 'Passages are only accepted while recording.',
+    startNumberInvalid: 'Invalid start number (1–{max} letters, digits or -).',
+    timeRequired: 'The passage time is missing.',
+  },
   settings: {
     mediaDirectoryInvalid: 'Storage location: please enter an absolute path (max. {max} characters).',
     deviceInvalid: 'Device: index between 0 and {max}.',
@@ -87,6 +106,7 @@ const en: typeof de = {
     lineWidthInvalid: 'Line width between 1 and {max} pixels.',
     linePositionInvalid: 'Finish line position between 0 and {max}.',
     rotationInvalid: 'Invalid image rotation.',
+    passageOffsetInvalid: 'Passage time offset between {min} and {max} ms.',
     pixelThresholdInvalid: 'Pixel change threshold between {min} and {max}.',
     occupancyThresholdInvalid: 'Occupancy threshold between {min} and {max} %.',
     durationInvalid: 'Time value ({field}) between {min} and {max} s.',

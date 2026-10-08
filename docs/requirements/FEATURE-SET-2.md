@@ -2,15 +2,16 @@
 
 | | |
 |---|---|
-| Status | Entwurf |
+| Status | Umgesetzt (2026-10-08) |
 | Bounded Context | `FinishRecording` (siehe CLAUDE.md, Abschnitt 9) |
 | Abhängigkeiten | [FEATURE-SET-1](FEATURE-SET-1.md) |
 
 Dieses Dokument beschreibt, **was** das System leisten muss.
 Wie es technisch umgesetzt wird, regeln `CLAUDE.md` und `docs/arc42/`.
 
-Entscheidungen vom 2026-10-08: Rennname beim Start überall Pflicht, eigener Ordner je Rennen, Startnummern
-als Passage-Meldung der Zeitmessung, Startnummern in den Metadaten der Aufnahme (nicht ins Video eingeblendet).
+Entscheidungen vom 2026-10-08: Rennname beim Start überall Pflicht (in der Oberfläche über einen Dialog), eigener
+Ordner je Rennen, Startnummern als Passage-Meldung der Zeitmessung, Startnummern in den Metadaten der Aufnahme
+(nicht ins Video eingeblendet); offene Punkte OP2-1 bis OP2-6 entschieden (Abschnitt 6).
 
 ---
 
@@ -46,10 +47,18 @@ Nicht im Umfang:
 
 ### 4.1 Rennen
 
-**FS2-01** Der Zustand Aufnahme kann nur mit einem Rennnamen gestartet werden, über die Oberfläche wie über
-externe Programme. Ohne Rennnamen wird der Start abgelehnt.
+**FS2-01** Der Zustand Aufnahme kann nur mit einem Rennnamen gestartet werden. In der Oberfläche wird der
+Rennname in einem Dialog eingegeben, externe Programme geben ihn im Start-Aufruf mit. Ohne gültigen Rennnamen
+wird der Start abgelehnt.
 
-**FS2-02** Der Rennname gilt für alle Aufnahmen, bis die Aufnahme erneut gestartet wird.
+**FS2-02** Der Rennname gilt für alle Aufnahmen, bis die Aufnahme erneut gestartet wird. Ein erneuter Start mit
+einem anderen Rennnamen wechselt das Rennen, ohne die Kameras neu zu starten.
+
+**FS2-07** Ein Rennname besteht aus Buchstaben, Ziffern, Leerzeichen und den Zeichen `-`, `_` und `.`, ist
+höchstens 120 Zeichen lang und beginnt und endet nicht mit Leerzeichen oder Punkt.
+
+**FS2-08** Ist der Startzustand der Anwendung Aufnahme (FS1-04), startet sie in Vorschau, bis ein Rennname
+eingegeben wird.
 
 **FS2-03** Jede Aufnahme speichert ihren Rennnamen.
 
@@ -68,6 +77,14 @@ Aufnahme noch gespeichert wird oder bereits gespeichert ist.
 
 **FS2-12** Enthält keine Aufnahme die Passagezeit, entsteht eine Aufnahme um die Passagezeit mit Vor- und
 Nachlauf (FS1-22, FS1-26), so als wäre zu diesem Zeitpunkt ein Zielereignis erkannt worden.
+
+**FS2-17** Eine Passage-Meldung trifft höchstens 5 s nach der Passage ein. Bis dahin hält das System die Bilder
+vor, die FS2-11 und FS2-12 benötigen.
+
+**FS2-18** Die Uhren von Zeitmessung und Kamera-Rechner werden synchron gehalten (z. B. NTP). Zusätzlich ist ein
+Versatz in Millisekunden einstellbar, der auf jede Passagezeit angerechnet wird (Standard 0 ms).
+
+**FS2-19** Jede Meldung ist eine eigene Passage, auch wenn dieselbe Startnummer mehrfach gemeldet wird.
 
 **FS2-13** Passagen werden nur im Zustand Aufnahme angenommen.
 
@@ -108,6 +125,21 @@ Funktionalität: Rennen und Startnummern
     Dann entsteht eine Aufnahme, die 10:05:00.000 enthält
     Und sie enthält die Startnummer 7
 
+  Szenario: Rennen wechseln
+    Angenommen der Zustand ist "Aufnahme" mit dem Rennnamen "Lauf 1"
+    Wenn die Aufnahme mit dem Rennnamen "Lauf 2" gestartet wird
+    Dann werden die Kameras nicht neu gestartet
+    Und folgende Aufnahmen liegen im Ordner des Rennens "Lauf 2"
+
+  Szenario: Ungültiger Rennname
+    Wenn die Aufnahme mit dem Rennnamen "../Lauf" gestartet wird
+    Dann wird der Start abgelehnt
+
+  Szenario: Versatz der Zeitmessung
+    Angenommen der Versatz der Zeitmessung beträgt +200 ms
+    Wenn die Passage der Startnummer 42 um 10:00:02.000 gemeldet wird
+    Dann wird sie mit der Passagezeit 10:00:02.200 gespeichert
+
   Szenario: Passage in der Vorschau
     Angenommen der Zustand ist "Vorschau"
     Wenn eine Passage gemeldet wird
@@ -116,16 +148,13 @@ Funktionalität: Rennen und Startnummern
 
 ---
 
-## 6. Offene Punkte
+## 6. Entschiedene Punkte
 
-Diese Punkte sind nicht entschieden und dürfen nicht stillschweigend umgesetzt werden
-(CLAUDE.md, Abschnitt 41).
-
-| Nr. | Frage |
-|---|---|
-| OP2-1 | FS1-04 (sofort in Aufnahme starten) braucht einen Rennnamen: aus der Konfiguration, oder startet die Anwendung dann in Vorschau? |
-| OP2-2 | Wie spät nach der Passage trifft die Meldung höchstens ein? Davon hängt ab, wie lange Spalten und Frontbilder für FS2-12 vorgehalten werden. |
-| OP2-3 | Auf welcher Uhr beruht die Passagezeit? Die Uhren von Zeitmessung und Kamera-PC müssen synchron sein (z. B. NTP), oder es braucht einen einstellbaren Versatz. |
-| OP2-4 | Welche Zeichen und welche Länge sind im Rennnamen erlaubt (er wird zum Ordnernamen)? |
-| OP2-5 | Kann der Rennname während der Aufnahme gewechselt werden, ohne die Kameras neu zu starten? |
-| OP2-6 | Was gilt, wenn dieselbe Startnummer mehrfach gemeldet wird (z. B. Runden)? |
+| Nr. | Frage | Entscheidung (2026-10-08) |
+|---|---|---|
+| OP2-1 | Rennname beim Startzustand Aufnahme (FS1-04)? | Nur über den Dialog; die Anwendung startet in Vorschau (FS2-08) |
+| OP2-2 | Wie spät trifft eine Passage-Meldung ein? | Höchstens 5 s nach der Passage (FS2-17) |
+| OP2-3 | Uhr der Passagezeit? | Uhren synchron (NTP) und einstellbarer Versatz (FS2-18) |
+| OP2-4 | Zeichen und Länge des Rennnamens? | FS2-07 |
+| OP2-5 | Rennwechsel ohne Neustart der Kameras? | Ja, durch erneuten Start (FS2-02) |
+| OP2-6 | Dieselbe Startnummer mehrfach? | Jede Meldung ist eine eigene Passage (FS2-19) |

@@ -37,14 +37,17 @@ existieren noch nicht.
 | `RecordingWindow` | Zeitfenster der Aufnahme (Vorlauf) und des Frontvideos (Front-Vor- und Nachlauf) |
 | `LineRateMeter`, `LineRate` | Gemessene Linienrate und Warnregel (unter 95 %) |
 | `RecordingId` | Kennung und Verzeichnisname einer Aufnahme, streng validiert |
+| `RaceName` | Rennname nach FS2-07 (Zeichen, Länge, keine reservierten Windows-Gerätenamen), zugleich Ordnername |
+| `Passage` | Startnummer und Passagezeit der Zeitmessung; `MaxReportDelay` = 5 s (FS2-17) |
 
 ### Application (`TimingApp.Application.FinishRecording`)
 
 | Baustein | Aufgabe |
 |---|---|
-| `FinishRecordingService` | Betriebszustände und Befehle, serialisiert; erzeugt je Kamerastart eine `CaptureSession` |
-| `CaptureSession` (intern) | Eine Verarbeitungsschleife je Sitzung: Belegung, Zielereignisse, Spaltenpuffer, Linienrate |
-| `RecordingSaver` | Speicher-Queue: Frontbilder abwarten, Zielbild rendern, Videos erzeugen, Metadaten zuletzt schreiben |
+| `FinishRecordingService` | Betriebszustände und Befehle, serialisiert; Start der Aufnahme nur mit `RaceName`; nimmt Passagen an (nur im Zustand Aufnahme, Versatz aus den Einstellungen); erzeugt je Kamerastart eine `CaptureSession` |
+| `CaptureSession` (intern) | Eine Verarbeitungsschleife je Sitzung: Belegung, Zielereignisse, Spaltenpuffer (mindestens 5 s + Vorlauf für späte Passagen), Linienrate, Zuordnung der Passagen |
+| `RecordingPassages` | Passagen einer Aufnahme; wächst auch nach dem Speichern und meldet dann dem Saver die Änderung |
+| `RecordingSaver` | Speicher-Queue: Frontbilder abwarten, Zielbild rendern, Videos erzeugen, Metadaten (mit Rennen und Passagen) zuletzt schreiben; schreibt später eintreffende Passagen nach (`UpdatePassagesAsync`) |
 | `SettingsService`, `RecordingService` | Einstellungen, Aufnahmeliste, Dateien, Löschen |
 | `TimeRange` | Auswahl von Spalten/Frontbildern, die ein Zeitfenster vollständig abdeckt |
 
@@ -74,10 +77,12 @@ Ports (von der Infrastruktur implementiert):
 | `DirectShowModes` | Aufnahmemodi je Gerät (Größe, höchste Bildrate, Pixelformat) aus `IAMStreamConfig` des Capture-Pins; bevorzugt das konfigurierte `FourCc` |
 | `DeviceResolution`, `MissingCameraSource` | Sucht beim Start den Index der per Name gewählten Kamera (Pfad, sonst eindeutiger Name); nicht gefunden → Quelle, deren `Open` mit `camera.notFound` scheitert |
 | `SyntheticCameraSource`, `VideoFileCameraSource`, `SimulationControl` | Simulation über denselben Port |
-| `CameraWorker` | Capture-Thread je Kamera, Zeitstempel, gemessene Bildrate, Fehlerzustand |
+| `CameraWorker`, `CapturedFrame` | Capture-Thread je Kamera, Zeitstempel, gemessene Bildrate, Fehlerzustand; das Bild wird erst auf Anforderung der Senke entpackt |
+| `ParallelFinishDecoder` | Entpackt Kamera-JPEGs der Zielkamera auf mehreren Workern, entnimmt die Spalte und gibt die Spalten in Aufnahmereihenfolge weiter |
 | `CaptureClock` | Gemeinsame monotone Zeitbasis aller Kameras |
 | `LineExtractor` | Entnimmt die Ziellinie als Spalte des gedrehten Bildes (`ImageRotation`), gemittelt über die Breite; liest dafür die passende Zeile/Spalte des Rohbilds, ohne es zu drehen. Dreht nur Vorschaubilder (`Upright`) |
-| `FramePreview`, `LiveStrip`, `PreviewWatchers` | Live-Vorschau, nur kodiert, solange jemand zusieht |
+| `FramePreview`, `LiveStrip`, `PreviewWatchers` | Live-Vorschau, nur kodiert, solange jemand zusieht; `LiveStrip` zeigt das laufende Zielbild auf fester Zeitachse (eine Zeitscheibe je nominellem Bildintervall, Lücken über 0,1 s schwarz) mit Zeitleiste |
+| `Timeline` | Zeitleiste (0,1 s, volle Sekunden mit Uhrzeit) für gespeichertes und laufendes Zielbild |
 | `ColumnImage`, `FinishImageRenderer` | Zielbild mit Zeitleiste als PNG |
 | `FfmpegVideoEncoder` | Ziel- und Frontvideo über ffmpeg |
 
@@ -87,7 +92,7 @@ Ports (von der Infrastruktur implementiert):
 |---|---|
 | `AuthEndpoints` | PIN-Anmeldung per Cookie ([ADR-002](../requirements/adr/ADR-002-operator-pin-login.md)) |
 | `ControlEndpoints` | Steuerbefehle für Bediener und externe Programme; Beenden nur extern |
-| `RecordingEndpoints`, `SettingsEndpoints`, `LiveEndpoints` | Aufnahmen, Dateien, Einstellungen, Geräte, MJPEG, Simulator |
+| `RecordingEndpoints`, `SettingsEndpoints`, `LiveEndpoints` | Aufnahmen, Dateien, Einstellungen, Geräte, MJPEG, Simulator; `GET /api/settings/external-control` liefert für Bediener, ob externe Steuerung aktiv ist, den Schlüssel (nur für angemeldete Bediener, `Cache-Control: no-store`), den Header-Namen und die Basis-URLs dieses Rechners (`NetworkAddresses`) |
 | `ApiKeyAuthenticationHandler`, `AccessPolicies` | `X-Api-Key`-Schema und Policies `control`, `external` |
 | `FinishHub`, `LiveStatusPublisher` | Status-Push und Hinweis auf geänderte Aufnahmeliste |
 | `FinishRecordingLifecycle` | Startzustand (FS1-04) und geordnetes Beenden |
@@ -97,7 +102,7 @@ Ports (von der Infrastruktur implementiert):
 | Feature | Inhalt |
 |---|---|
 | `access` | `LoginView`, `sessionStore` |
-| `finishRecording` | `LiveView`, `LivePreview`, `ModeBadge`, `RecordingsView`, `PlaybackView`, `FinishImageViewer`, `SettingsView`, Stores `controlStore`, `recordingsStore`, Logik `playbackSync` |
+| `finishRecording` | `LiveView` mit `RaceDialog` (Rennname vor dem Start), `LivePreview`, `ModeBadge`, `RecordingsView` (Rennen, Startnummern, Filter `raceFilter`), `PlaybackView` (Passagen als Markierungen in `FinishImageViewer`), `SettingsView` mit `ExternalControlCard`, Stores `controlStore`, `recordingsStore`, Logik `playbackSync`, `deviceSelection`, `externalControl` |
 
 Gemeinsam: `api/client.ts` (typisierter Client und `mediaUrls`), `api/live.ts` (SignalR mit Polling-Fallback),
 `i18n/messages/*` (de, en), `shared/format.ts` (Uhrzeit abgeschnitten nach FS1-70).

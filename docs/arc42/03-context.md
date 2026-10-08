@@ -13,7 +13,7 @@ flowchart LR
 | Nachbar | Schnittstelle | Implementierung |
 |---|---|---|
 | Bediener (Browser) | REST unter `/api/*`, Live-Push über SignalR `/hubs/finish`, MJPEG unter `/api/live/{kind}`, Medien mit HTTP-Range unter `/api/recordings/{id}/files/{file}` | `TimingApp.Api` |
-| Externes Programm | REST unter `/api/control/*` mit Header `X-Api-Key` ([ADR-001](../requirements/adr/ADR-001-external-control-api-key.md)) | `ControlEndpoints`, `ApiKeyAuthenticationHandler` |
+| Externes Programm | REST unter `/api/control/*` (Start mit Rennname) und `POST /api/passages` (Startnummer und Passagezeit, FEATURE-SET-2) mit Header `X-Api-Key` ([ADR-001](../requirements/adr/ADR-001-external-control-api-key.md)) | `ControlEndpoints`, `ApiKeyAuthenticationHandler` |
 | Zielkamera, Frontkamera | Media Foundation Source Reader über Vortice.MediaFoundation, natives Format explizit (MJPG); Rückfall OpenCV `VideoCapture` (DSHOW, V4L2) | `MediaFoundationCameraSource`, `UsbCameraSource` |
 | ffmpeg | Externer Prozess, Pfad konfigurierbar (`TimingApp:Camera:FfmpegPath`) | `FfmpegVideoEncoder` |
 | Dateisystem | Datenverzeichnis `TimingApp:Storage:DataDirectory`, Medienordner einstellbar | `FileRecordingStore`, `JsonSettingsStore` |

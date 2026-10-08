@@ -27,7 +27,9 @@ export const useControlStore = defineStore('control', () => {
     }
   }
 
-  const start = (mode: OperatingMode) => run(() => unwrap(api.POST('/api/control/start', { body: { mode } })))
+  /** Recording needs the race name (FS2-01); preview does not. */
+  const start = (mode: OperatingMode, raceName?: string) =>
+    run(() => unwrap(api.POST('/api/control/start', { body: { mode, raceName: raceName ?? null } })))
   const stop = () => run(() => unwrap(api.POST('/api/control/stop')))
   const setTrigger = (active: boolean) => run(() => unwrap(api.PUT('/api/control/trigger', { body: { active } })))
   const relearn = () => run(() => unwrap(api.POST('/api/control/background/relearn')))

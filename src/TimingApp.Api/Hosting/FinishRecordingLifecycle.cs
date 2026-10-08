@@ -44,7 +44,13 @@ internal sealed class FinishRecordingLifecycle(
     {
         try
         {
-            await service.StartAsync(mode, CancellationToken.None);
+            if (mode == OperatingMode.Recording)
+            {
+                // Recording needs a race name from the dialog (FS2-01, FS2-08): start in Preview until it is given.
+                logger.LogInformation("Start-up mode Recording needs a race name; starting in Preview");
+                mode = OperatingMode.Preview;
+            }
+            await service.StartAsync(mode, null, CancellationToken.None);
         }
 #pragma warning disable CA1031 // Start-up must not crash the host; the failure is logged and the operator can retry.
         catch (Exception ex)

@@ -17,6 +17,10 @@
 | Belichtung, Bildrate und Last: lange Belichtung begrenzt die Bildrate (−5 ≈ 1/32 s → ~32 Bilder/s); hohe Auflösung der Frontkamera kostet CPU (Dekodieren, JPEG für den Ringpuffer) | Linienrate unter der eingestellten Bildrate | Zielkamera −7 oder kürzer; Frontkamera 1280×720; Linienraten-Warnung (FS1-14) |
 | Aufnahmemodi werden aus DirectShow-Strukturen über feste Offsets gelesen (`VIDEOINFOHEADER`, `VIDEO_STREAM_CONFIG_CAPS`) | Falsche Bildraten in der Auswahl, falls ein Treiber abweicht | Mit SVPRO, eMeet und FJ Camera geprüft; die Kamera misst die tatsächliche Rate |
 | Kamera ohne MJPG (z. B. nur YUY2): die Aufnahme fordert trotzdem das konfigurierte `FourCc` an | Treiber wählt ein anderes Format oder eine niedrigere Rate | Auswahl zeigt das Format an; gemessene Bildrate beachten |
+| Entpacken der Zielkamera-JPEGs braucht bei 1920×1080 und 80–90 Bilder/s 2–3 Kerne | Auf schwachen oder gedrosselten Rechnern werden Bilder verworfen (Log, Linienraten-Warnung) | Auflösung senken; Ziel-PC messen; sonst Teil-Dekodierung oder Hardware-Dekodierung (offen) |
+| Front-JPEGs werden unverändert gepuffert (eMeet 1080p ca. 290 KB/Bild) | Frontpuffer bis ca. 560 MB bei 64 s Vorhaltezeit | Frontkamera 1280×720; im Dauerbetrieb messen (OP-2) |
+| Uhren von Zeitmessung und Kamera-Rechner laufen auseinander | Startnummern landen bei der falschen Aufnahme oder erzeugen eigene Aufnahmen | NTP auf beiden Rechnern (FS2-18), Versatz einstellbar; mit echter Zeitmessung prüfen |
+| Passage-Meldungen später als 5 s | Bilder nicht mehr gepuffert, Passage wird verworfen (Log-Warnung) | FS2-17 mit der Zeitmessung abgestimmt |
 | Gerätepfad ändert sich bei Kameras ohne Seriennummer mit dem USB-Port | Rückfall auf den Namen; bei zwei gleichen Modellen `camera.notFound` | Kamera neu auswählen; Ziel- und Frontkamera sind verschiedene Modelle (FEATURE-SET-1 §4) |
 | Browser erlauben über HTTP/1.1 sechs Verbindungen je Host; die Live-Ansicht belegt drei mit MJPEG | Zwei offene Live-Tabs im selben Browser blockieren API-Aufrufe | Nur einen Live-Tab je Browser öffnen; bei Bedarf HTTPS mit HTTP/2 oder eine kombinierte Vorschau |
 

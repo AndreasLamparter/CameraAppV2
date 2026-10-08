@@ -4,6 +4,63 @@
  */
 
 export interface paths {
+    "/api/passages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PassageRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PassageReceipt"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/control/shutdown": {
         parameters: {
             query?: never;
@@ -649,6 +706,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/external-control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExternalControlInfo"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cameras/devices": {
         parameters: {
             query?: never;
@@ -749,8 +841,14 @@ export interface components {
             /** Format: double */
             frontPostRollSeconds: number;
         };
+        ExternalControlInfo: {
+            enabled: boolean;
+            apiKey: null | string;
+            apiKeyHeader: string;
+            baseUrls: string[];
+        };
         /** @enum {unknown} */
-        FinishEventEnd: "PostRoll" | "MaxDuration" | "Stopped";
+        FinishEventEnd: "PostRoll" | "MaxDuration" | "Stopped" | "Passage";
         FinishLineDto: {
             rotation: components["schemas"]["ImageRotation"];
             /** Format: int32 */
@@ -770,6 +868,7 @@ export interface components {
             lastProblem: null | components["schemas"]["SaveProblem"];
             /** Format: date-time */
             serverTime: string;
+            raceName?: null | string;
         };
         FrontVideoInfo: {
             available: boolean;
@@ -808,6 +907,21 @@ export interface components {
         };
         /** @enum {unknown} */
         OperatingMode: "Stopped" | "Preview" | "Recording";
+        PassageInfo: {
+            startNumber: string;
+            /** Format: int64 */
+            time: number;
+        };
+        PassageReceipt: {
+            startNumber: string;
+            /** Format: date-time */
+            time: string;
+        };
+        PassageRequest: {
+            startNumber: null | string;
+            /** Format: date-time */
+            time: null | string;
+        };
         /** @enum {unknown} */
         PreviewKind: "FinishCamera" | "FrontCamera" | "FinishStrip";
         ProblemDetails: {
@@ -847,6 +961,8 @@ export interface components {
             finishOffsetMs: number;
             /** Format: int32 */
             frontOffsetMs: number;
+            raceName?: null | string;
+            passages?: null | components["schemas"]["PassageInfo"][];
         };
         RecordingSummary: {
             id: string;
@@ -860,6 +976,8 @@ export interface components {
             hasVideoError: boolean;
             /** Format: int64 */
             sizeBytes: number;
+            raceName?: null | string;
+            startNumbers?: null | string[];
         };
         SaveProblem: {
             code: string;
@@ -877,6 +995,11 @@ export interface components {
             frontCameraEnabled: boolean;
             finishLine: components["schemas"]["FinishLineDto"];
             detection: components["schemas"]["DetectionDto"];
+            /**
+             * Format: int32
+             * @default 0
+             */
+            passageOffsetMs: number;
         };
         SettingsResponse: {
             settings: components["schemas"]["SettingsDto"];
@@ -888,6 +1011,7 @@ export interface components {
         };
         StartRequest: {
             mode: components["schemas"]["OperatingMode"];
+            raceName?: null | string;
         };
         TriggerRequest: {
             active: boolean;

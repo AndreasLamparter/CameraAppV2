@@ -17,7 +17,7 @@ public sealed class FeatureSet1AcceptanceTests : IAsyncLifetime
 
     private async Task StartAsync(OperatingMode mode)
     {
-        await _app.Service.StartAsync(mode, Ct);
+        await _app.Service.StartAsync(mode, mode == OperatingMode.Recording ? "Lauf 1" : null, Ct);
         // Background learned on a free line before every scenario.
         await _app.Session.FeedAsync(Line.Columns(-5, -3, Line.Free));
     }
@@ -27,7 +27,7 @@ public sealed class FeatureSet1AcceptanceTests : IAsyncLifetime
     {
         Assert.Equal(OperatingMode.Stopped, _app.Service.GetStatus().Mode);
 
-        await _app.Service.StartAsync(OperatingMode.Recording, Ct);
+        await _app.Service.StartAsync(OperatingMode.Recording, "Lauf 1", Ct);
 
         var status = _app.Service.GetStatus();
         Assert.Equal(OperatingMode.Recording, status.Mode);
