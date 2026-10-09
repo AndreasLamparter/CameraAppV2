@@ -205,6 +205,10 @@ internal sealed class MediaFoundationCameraSource(CameraSettings settings, Camer
         {
             return ExposureNotApplied;
         }
+        if (RegulatesItself(settings.Exposure, min, max))
+        {
+            return null;
+        }
         var wanted = settings.Exposure is { } value ? (int)Math.Round(value) : defaultValue;
         if (wanted < min || wanted > max ||
             control.Set(CameraControlExposure, wanted, settings.Exposure is null ? FlagAuto : FlagManual) != 0 ||
@@ -215,6 +219,12 @@ internal sealed class MediaFoundationCameraSource(CameraSettings settings, Camer
         var applied = settings.Exposure is null ? (flags & FlagAuto) != 0 : actual == wanted && (flags & FlagManual) != 0;
         return applied ? null : ExposureNotApplied;
     }
+
+    /// <summary>
+    /// Automatic exposure is requested and the camera offers no adjustable exposure (a single value, e.g. the eMeet
+    /// C980 Pro reports -14..-14): the camera regulates the exposure itself, which is what was asked for.
+    /// </summary>
+    internal static bool RegulatesItself(double? exposure, int min, int max) => exposure is null && min == max;
 
     /// <summary>FOURCC subtypes (MJPG, YUY2, NV12, ...) carry the code in their first four bytes.</summary>
     internal static string FourCc(Guid subtype) => DirectShowModes.FourCc(subtype);

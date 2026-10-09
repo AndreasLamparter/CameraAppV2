@@ -529,6 +529,14 @@ public sealed class CameraPipelineTests
         Assert.Equal(expected, MediaFoundationCameraSource.FrameRate(packed));
 
     [Theory]
+    [InlineData(null, -14, -14, true)]
+    [InlineData(null, -13, 0, false)]
+    [InlineData(-7.0, -14, -14, false)]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void RegulatesItself_AutoExposureWithoutAdjustableRange_NeedsNoControl(double? exposure, int min, int max, bool expected) =>
+        Assert.Equal(expected, MediaFoundationCameraSource.RegulatesItself(exposure, min, max));
+
+    [Theory]
     [InlineData(CaptureBackend.Auto, true)]
     [InlineData(CaptureBackend.Msmf, true)]
     [InlineData(CaptureBackend.DShow, false)]
