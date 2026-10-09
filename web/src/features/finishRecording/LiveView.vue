@@ -128,7 +128,7 @@ const cameras = computed(() => {
             color="neutral"
             variant="outline"
             :label="t('finish.live.stop')"
-            :disabled="control.busy || !running"
+            :disabled="!running"
             @click="stop"
           />
           <UButton

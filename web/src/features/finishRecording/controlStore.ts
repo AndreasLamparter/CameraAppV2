@@ -18,21 +18,30 @@ export const useControlStore = defineStore('control', () => {
     apply(await unwrap(api.GET('/api/control/status')))
   }
 
-  async function run(command: () => Promise<FinishStatus>): Promise<void> {
+  /** A command without answer (e.g. backend restarted meanwhile) fails after this time instead of blocking the controls. */
+  const COMMAND_TIMEOUT_MS = 30_000
+
+  /** Counts running commands, so a stop sent while another command runs does not release the others' lock early. */
+  let running = 0
+
+  async function run(command: (signal: AbortSignal) => Promise<FinishStatus>): Promise<void> {
+    running++
     busy.value = true
     try {
-      apply(await command())
+      apply(await command(AbortSignal.timeout(COMMAND_TIMEOUT_MS)))
     } finally {
-      busy.value = false
+      running--
+      busy.value = running > 0
     }
   }
 
   /** Recording needs the race name (FS2-01); preview does not. */
   const start = (mode: OperatingMode, raceName?: string) =>
-    run(() => unwrap(api.POST('/api/control/start', { body: { mode, raceName: raceName ?? null } })))
-  const stop = () => run(() => unwrap(api.POST('/api/control/stop')))
-  const setTrigger = (active: boolean) => run(() => unwrap(api.PUT('/api/control/trigger', { body: { active } })))
-  const relearn = () => run(() => unwrap(api.POST('/api/control/background/relearn')))
+    run((signal) => unwrap(api.POST('/api/control/start', { body: { mode, raceName: raceName ?? null }, signal })))
+  /** Always possible while the cameras run, also while another command is pending (the backend serializes them). */
+  const stop = () => run((signal) => unwrap(api.POST('/api/control/stop', { signal })))
+  const setTrigger = (active: boolean) => run((signal) => unwrap(api.PUT('/api/control/trigger', { body: { active }, signal })))
+  const relearn = () => run((signal) => unwrap(api.POST('/api/control/background/relearn', { signal })))
 
   return { status, busy, apply, load, start, stop, setTrigger, relearn }
 })
